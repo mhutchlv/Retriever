@@ -89,9 +89,18 @@ describe("officer payroll", () => {
   const run = (input: Record<string, unknown>) =>
     runTool("officer_payroll", { state: "NV", policyEffectiveDate: date, ...input }, { tenant }).output as OfficerPayrollOutput;
 
+  it("never applies sample limits as a state's figures", () => {
+    const out = run({ entityType: "corporation", people: [{ name: "Low", actualPayroll: "10000" }] });
+    assert.equal(out.limits.source, "none on file");
+    assert.equal(out.people[0]!.countedPayroll.cents, 1000000);
+    assert.match(out.warnings.join(" "), /hasn't loaded verified/);
+  });
+
   it("raises to the minimum, caps at the maximum, and zeroes exclusions", () => {
     const out = run({
       entityType: "corporation",
+      limitsOverride: { minAnnual: "30000", maxAnnual: "150000", ownerAnnual: "50000" },
+
       people: [
         { name: "Low", actualPayroll: "10000" },
         { name: "High", actualPayroll: "400000" },
@@ -104,18 +113,18 @@ describe("officer payroll", () => {
       [3000000, 15000000, 9000000, 0],
     );
     assert.equal(out.totalCountedPayroll.display, "$270,000.00");
-    assert.equal(out.limits.source, "state table");
-    assert.match(out.warnings.join(" "), /sample figures/);
+    assert.equal(out.limits.source, "entered by user");
   });
 
   it("prorates limits for a short term", () => {
-    const out = run({ entityType: "corporation", policyTermDays: 73, people: [{ name: "Low", actualPayroll: "100" }] });
+    const out = run({ entityType: "corporation", policyTermDays: 73, limitsOverride: { minAnnual: "30000", maxAnnual: "150000", ownerAnnual: "50000" }, people: [{ name: "Low", actualPayroll: "100" }] });
     assert.equal(out.people[0]!.countedPayroll.display, "$6,000.00");
   });
 
   it("excludes owners unless they elected coverage, then uses the set amount", () => {
     const out = run({
       entityType: "partnership",
+      limitsOverride: { minAnnual: "30000", maxAnnual: "150000", ownerAnnual: "50000" },
       people: [
         { name: "Not elected", actualPayroll: "80000" },
         { name: "Elected", actualPayroll: "5000", status: "included" },

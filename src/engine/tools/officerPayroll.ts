@@ -113,13 +113,15 @@ export const officerPayroll: Tool<Input, OfficerPayrollOutput> = {
   run(input, rules) {
     const warnings: string[] = [];
     const table = rules.get<Record<string, OfficerLimits>>("officer-payroll");
-    const fromTable = table.data[input.state];
+    // Only verified limits are ever applied as a state's figures. Sample rows are
+    // placeholders and would read as that state's real numbers, so they are not used.
+    const fromTable = table.status === "verified" ? table.data[input.state] : undefined;
     const limits = input.limitsOverride ?? fromTable;
     const source = input.limitsOverride ? "entered by user" : fromTable ? "state table" : "none on file";
     if (source === "none on file") {
-      warnings.push(`Penny has no officer payroll limits for ${input.state} yet. Actual payroll is shown; enter the state's limits to apply them.`);
-    } else if (source === "state table" && table.status === "sample") {
-      warnings.push("These limits are sample figures, not the bureau's current filing. Confirm them before relying on the result.");
+      warnings.push(
+        `Penny hasn't loaded verified officer and owner payroll limits for ${input.state} yet, so no state minimum, maximum or owner amount is applied. Actual payroll is shown. Ask your carrier or the state's rating bureau for the current limits and enter them to apply them.`,
+      );
     }
     if (input.entityType === "llc") {
       warnings.push("LLC members are treated like corporate officers here. Some states treat members like partners; check the state rule.");
