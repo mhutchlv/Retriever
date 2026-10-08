@@ -35,6 +35,7 @@ ALLOWED_IPS="<office ip>/32" \
 - `ALLOWED_IPS`: leave it set while the reference tables are sample data, so only the team can reach the site. Remove it to go public.
 - Without `ANTHROPIC_API_KEY` the chat uses its built-in keyword answers; tools, demos and sign-up all still work.
 - With `ANTHROPIC_API_KEY` the chat uses Claude Sonnet 5.5 at low effort, gated to premium audit and Penny topics. Spend is capped per UTC day: `PENNY_CHAT_DAILY_USD` for the whole site (default $10), `PENNY_CHAT_VISITOR_USD` per visitor (default $0.50) and `PENNY_CHAT_VISITOR_MESSAGES` per visitor (default 40), plus 20 messages a minute per visitor and 4 model calls in flight. Past any limit, chat drops to the built-in answers until the next day. Counters persist in `/data/chat-budget.json` (hashed visitor keys, no IPs). Also set a monthly spend limit on the Anthropic workspace as a backstop.
+- Preview key: instead of copying a key, set `ANTHROPIC_KEY_VAULT_SECRET=https://kv-st360-dev.vault.azure.net/secrets/anthropic-api-key`. The app reads ST360's Anthropic key from Key Vault with its managed identity (`id-penny-web` has Key Vault Secrets User on that one secret only), so nobody handles the value and rotations flow through. Move to Propono's own key and vault with the move to Propono infrastructure.
 - `PENNY_LEAD_WEBHOOK` posts each sign-up as JSON, the same pattern as ST360's Teams e-sign notifications. Sign-ups are also written to `leads.jsonl` on the share.
 
 The script prints the live URL and checks `/api/health` at the end.

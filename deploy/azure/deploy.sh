@@ -14,6 +14,9 @@
 #   TAG                default <git sha>-<time>
 #   ALLOWED_IPS        comma-separated CIDRs; when set, only these can reach the site
 #   ANTHROPIC_API_KEY  turns on model chat; stored as a Container App secret
+#   ANTHROPIC_KEY_VAULT_SECRET  alternative to ANTHROPIC_API_KEY: a versionless Key Vault secret URL the
+#                      app reads with its managed identity, so the key is never copied. The identity
+#                      needs Key Vault Secrets User on that secret.
 #   PENNY_LEAD_WEBHOOK URL that gets each new sign-up (Teams / Power Automate); stored as a secret
 #   PENNY_CHAT_DAILY_USD         whole-site model chat spend per UTC day, dollars (default 10)
 #   PENNY_CHAT_VISITOR_USD       one visitor's model chat spend per day (default 0.50)
@@ -129,9 +132,13 @@ YAML
       - server: ${ACR_SERVER}
         identity: ${IDENTITY_ID}
 YAML
-  if [[ -n "${ANTHROPIC_API_KEY:-}" || -n "${PENNY_LEAD_WEBHOOK:-}" ]]; then
+  if [[ -n "${ANTHROPIC_API_KEY:-}" || -n "${ANTHROPIC_KEY_VAULT_SECRET:-}" || -n "${PENNY_LEAD_WEBHOOK:-}" ]]; then
     echo "    secrets:"
-    [[ -n "${ANTHROPIC_API_KEY:-}" ]] && printf '      - name: anthropic-api-key\n        value: "%s"\n' "$ANTHROPIC_API_KEY"
+    if [[ -n "${ANTHROPIC_KEY_VAULT_SECRET:-}" ]]; then
+      printf '      - name: anthropic-api-key\n        keyVaultUrl: %s\n        identity: %s\n' "$ANTHROPIC_KEY_VAULT_SECRET" "$IDENTITY_ID"
+    elif [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
+      printf '      - name: anthropic-api-key\n        value: "%s"\n' "$ANTHROPIC_API_KEY"
+    fi
     [[ -n "${PENNY_LEAD_WEBHOOK:-}" ]] && printf '      - name: lead-webhook\n        value: "%s"\n' "$PENNY_LEAD_WEBHOOK"
   fi
   cat <<YAML
@@ -158,7 +165,7 @@ YAML
           - name: PENNY_CHAT_VISITOR_MESSAGES
             value: "${PENNY_CHAT_VISITOR_MESSAGES:-40}"
 YAML
-  [[ -n "${ANTHROPIC_API_KEY:-}" ]] && printf '          - name: ANTHROPIC_API_KEY\n            secretRef: anthropic-api-key\n'
+  [[ -n "${ANTHROPIC_API_KEY:-}" || -n "${ANTHROPIC_KEY_VAULT_SECRET:-}" ]] && printf '          - name: ANTHROPIC_API_KEY\n            secretRef: anthropic-api-key\n'
   [[ -n "${PENNY_LEAD_WEBHOOK:-}" ]] && printf '          - name: PENNY_LEAD_WEBHOOK\n            secretRef: lead-webhook\n'
   cat <<YAML
         volumeMounts:
