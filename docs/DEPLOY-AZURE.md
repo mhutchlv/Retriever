@@ -38,6 +38,8 @@ ALLOWED_IPS="<office ip>/32" \
 - Preview key: instead of copying a key, set `ANTHROPIC_KEY_VAULT_SECRET=https://kv-st360-dev.vault.azure.net/secrets/anthropic-api-key`. The app reads ST360's Anthropic key from Key Vault with its managed identity (`id-penny-web` has Key Vault Secrets User on that one secret only), so nobody handles the value and rotations flow through. Move to Propono's own key and vault with the move to Propono infrastructure.
 - `PENNY_LEAD_WEBHOOK` posts each sign-up as JSON, the same pattern as ST360's Teams e-sign notifications. Sign-ups are also written to `leads.jsonl` on the share.
 
+- Workspace sign-in (preview): create each account's entry with `printf '%s' '<password>' | node scripts/hash-password.ts <username> "<display name>" auditor >> users.json` (the password goes in on stdin, only a salted scrypt hash comes out), then deploy with `PENNY_USERS_FILE=users.json`. The list is stored as a Container App secret, never in git. Without it `/login.html` refuses everyone. Sessions last 8 hours in memory (a restart signs everyone out); 8 failed attempts lock an account for 15 minutes. The sample cases live in `/data/workspace.json`. Magic links and SSO replace this before any client data.
+
 The script prints the live URL and checks `/api/health` at the end.
 
 ## Custom domain

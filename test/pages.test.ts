@@ -4,7 +4,8 @@ import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 const dir = fileURLToPath(new URL("../public/", import.meta.url));
-const pages = readdirSync(dir).filter((f) => f.endsWith(".html"));
+// workspace.html is the signed-in app shell; its menu links the policies instead of a footer.
+const pages = readdirSync(dir).filter((f) => f.endsWith(".html") && f !== "workspace.html");
 
 test("every page links the privacy policy and terms in its footer", () => {
   for (const page of pages) {

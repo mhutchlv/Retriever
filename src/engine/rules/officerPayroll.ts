@@ -70,3 +70,11 @@ export const officerPayroll2026v2: RuleSet<Record<string, StateOwnerRules>> = {
     },
   },
 };
+
+// The same Nevada rows for policies effective in 2025. NRS 616B.624 and 616B.659
+// set these amounts long before 2025 and were unchanged by SB 317.
+export const officerPayroll2025: RuleSet<Record<string, StateOwnerRules>> = {
+  ...officerPayroll2026v2,
+  version: "2025.1",
+  effectiveFrom: "2025-01-01",
+};

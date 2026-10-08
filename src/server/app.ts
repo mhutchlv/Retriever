@@ -9,6 +9,11 @@ import { isToolName, replayRun, runTool, TOOLS, type RunRecord } from "../engine
 import { InputError } from "../engine/money.ts";
 import { ENGINE_VERSION } from "../engine/version.ts";
 import type { LeadSink } from "../leads/store.ts";
+import { Auth, clearedCookie, readCookie, SESSION_COOKIE, sessionCookie, type SessionUser } from "../auth/auth.ts";
+import { workspaceChat } from "../workspace/penny.ts";
+import { computeCase, type Case } from "../workspace/model.ts";
+import { reportHtml, worksheetCsv } from "../workspace/exports.ts";
+import { parseAction, tenantFor, verifyTimeline, WorkspaceStore } from "../workspace/store.ts";
 import type { RunLog } from "../runlog/store.ts";
 
 const PUBLIC_DIR = resolve(fileURLToPath(new URL("../../public/", import.meta.url)));
@@ -71,9 +76,14 @@ class RateLimiter {
   }
 }
 
-function send(res: ServerResponse, status: number, body: unknown) {
-  res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", ...SECURITY_HEADERS });
+function send(res: ServerResponse, status: number, body: unknown, headers: Record<string, string> = {}) {
+  res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", ...SECURITY_HEADERS, ...headers });
   res.end(JSON.stringify(body));
+}
+
+function sendText(res: ServerResponse, status: number, type: string, body: string, headers: Record<string, string> = {}) {
+  res.writeHead(status, { "Content-Type": type, "Cache-Control": "no-store", ...SECURITY_HEADERS, ...headers });
+  res.end(body);
 }
 
 async function readJson(req: IncomingMessage): Promise<unknown> {
@@ -138,23 +148,188 @@ export interface AppOptions {
   trustProxy?: boolean;
   /** Daily spend and message limits for model-answered chat. */
   budget?: ChatBudget;
+  /** Signed-in accounts. Without accounts the workspace stays closed. */
+  auth?: Auth;
+  workspace?: WorkspaceStore;
 }
 
-export function createApp({ runLog, leads, useModel = modelConfigured(), trustProxy = false, budget = new ChatBudget() }: AppOptions): Server {
+export function createApp({
+  runLog,
+  leads,
+  useModel = modelConfigured(),
+  trustProxy = false,
+  budget = new ChatBudget(),
+  auth = new Auth([]),
+  workspace = new WorkspaceStore(),
+}: AppOptions): Server {
   const toolLimiter = new RateLimiter(60, 60_000);
   const chatLimiter = new RateLimiter(20, 60_000);
   const leadLimiter = new RateLimiter(5, 60_000);
+  const loginLimiter = new RateLimiter(10, 60_000);
+  const actionLimiter = new RateLimiter(120, 60_000);
+  // Behind Azure ingress the site is HTTPS-only, so cookies are marked Secure there.
+  const secureCookies = trustProxy;
 
   const record = (run: RunRecord) => {
     runLog.append(run);
     return run;
   };
 
+  // Workspace totals are recomputed on every view. A run with the same fingerprint
+  // is the same result, so it is logged once and its first receipt reused.
+  const seenRuns = new Map<string, RunRecord>();
+  const recordOnce = (runs: RunRecord[]) =>
+    runs.map((r) => {
+      const seen = seenRuns.get(r.fingerprint);
+      if (seen) return seen;
+      record(r);
+      seenRuns.set(r.fingerprint, r);
+      if (seenRuns.size > 20_000) seenRuns.clear();
+      return r;
+    });
+
+  const sessionToken = (req: IncomingMessage) => readCookie(req.headers.cookie, SESSION_COOKIE);
+  const signedIn = (req: IncomingMessage): SessionUser => {
+    const user = auth.user(sessionToken(req));
+    if (!user) throw new HttpError(401, "Please sign in.");
+    return user;
+  };
+  // State-changing requests from a browser must come from this site.
+  const sameOrigin = (req: IncomingMessage) => {
+    const origin = req.headers.origin;
+    if (!origin) return;
+    let host = "";
+    try {
+      host = new URL(origin).host;
+    } catch {
+      /* treated as cross-site */
+    }
+    if (host !== req.headers.host) throw new HttpError(403, "Cross-site request refused.");
+  };
+
+  function receiptsOf(runs: RunRecord[]) {
+    return recordOnce(runs).map((r) => ({ runId: r.runId, tool: r.tool, fingerprint: r.fingerprint, dataStatus: r.dataStatus, rules: r.rules, engineVersion: r.engineVersion }));
+  }
+
+  function caseView(user: SessionUser, c: Case) {
+    const totals = computeCase(c, tenantFor(user.username));
+    return { case: c, totals: { ...totals, runs: receiptsOf(totals.runs) }, timelineCheck: verifyTimeline(c) };
+  }
+
+  function caseSummary(user: SessionUser, c: Case) {
+    const t = computeCase(c, tenantFor(user.username));
+    return {
+      id: c.id,
+      insured: c.insured,
+      state: c.state,
+      period: `${c.policyEffectiveDate} to ${c.policyExpirationDate}`,
+      status: c.status,
+      dueDate: c.dueDate,
+      auditType: c.auditType,
+      openFlags: t.openFlags,
+      openFindings: t.openFindings,
+      premium: t.estimate?.totalAuditPremium,
+      comparison: t.estimate?.comparison,
+    };
+  }
+
+  async function handleWorkspace(req: IncomingMessage, res: ServerResponse, path: string, method: string) {
+    if (method === "POST" && path === "/api/auth/login") {
+      sameOrigin(req);
+      if (!loginLimiter.allow(clientKey(req, trustProxy))) throw new HttpError(429, "Too many sign-in attempts. Try again in a minute.");
+      const body = (await readJson(req)) as { username?: unknown; password?: unknown };
+      if (typeof body.username !== "string" || typeof body.password !== "string" || body.password.length > 200) {
+        throw new HttpError(400, "Enter a username and password.");
+      }
+      const result = auth.login(body.username, body.password);
+      if (!result.ok) {
+        console.log(JSON.stringify({ event: "login_failed", reason: result.reason }));
+        throw new HttpError(
+          result.reason === "locked" ? 429 : 401,
+          result.reason === "locked" ? "Too many failed attempts. Try again in 15 minutes." : "That username and password don't match.",
+        );
+      }
+      console.log(JSON.stringify({ event: "login", user: result.user.username }));
+      return send(res, 200, { user: result.user }, { "Set-Cookie": sessionCookie(result.token, secureCookies) });
+    }
+    if (method === "POST" && path === "/api/auth/logout") {
+      sameOrigin(req);
+      auth.logout(sessionToken(req));
+      return send(res, 200, { ok: true }, { "Set-Cookie": clearedCookie(secureCookies) });
+    }
+    if (method === "GET" && path === "/api/auth/me") {
+      return send(res, 200, { user: signedIn(req) });
+    }
+
+    const user = signedIn(req);
+    if (method !== "GET") {
+      sameOrigin(req);
+      if (!actionLimiter.allow(user.username)) throw new HttpError(429, "Too many changes in a minute. Slow down a little.");
+    }
+
+    if (method === "GET" && path === "/api/workspace/cases") {
+      return send(res, 200, { user, cases: workspace.cases(user.username).map((c) => caseSummary(user, c)) });
+    }
+    if (method === "POST" && path === "/api/workspace/reset") {
+      workspace.reset(user.username);
+      return send(res, 200, { ok: true });
+    }
+
+    const m = path.match(/^\/api\/workspace\/cases\/([A-Za-z0-9-]{1,30})(\/[a-z.]+)?$/);
+    if (!m) throw new HttpError(404, "Not found.");
+    const c = workspace.get(user.username, m[1]!);
+    if (!c) throw new HttpError(404, "No such case.");
+    const sub = m[2] ?? "";
+
+    if (method === "GET" && sub === "") return send(res, 200, caseView(user, c));
+    if (method === "POST" && sub === "/actions") {
+      const action = parseAction(((await readJson(req)) as { action?: unknown }).action);
+      const via = req.headers["x-penny-via"] === "penny" ? "penny" : "workspace";
+      const event = workspace.apply(user.username, c.id, action, user.displayName, via);
+      return send(res, 200, { event, ...caseView(user, workspace.get(user.username, c.id)!) });
+    }
+    if (method === "POST" && sub === "/preview") {
+      const action = parseAction(((await readJson(req)) as { action?: unknown }).action);
+      return send(res, 200, { card: workspace.preview(user.username, c.id, action, user.displayName) });
+    }
+    if (method === "POST" && sub === "/chat") {
+      if (!chatLimiter.allow(clientKey(req, trustProxy))) throw new HttpError(429, "Too many messages. Try again in a minute.");
+      const history = parseHistory(await readJson(req));
+      if (!useModel) return send(res, 200, { reply: "Penny's assistant isn't connected on this server. Every workspace button still works.", cards: [] });
+      const ticket = budget.begin(`user:${user.username.toLowerCase()}`);
+      if (!ticket.ok) return send(res, 200, { reply: fallbackNotice(ticket.reason), cards: [] });
+      const cost: ModelCost = { micros: 0, calls: 0 };
+      try {
+        const out = await workspaceChat(history, { user, store: workspace, caseId: c.id }, cost);
+        return send(res, 200, { reply: out.reply, cards: out.cards, receipts: receiptsOf(out.runs) });
+      } catch (err) {
+        console.error("workspace chat failed", err);
+        return send(res, 200, { reply: "Penny couldn't answer just now. Try again in a moment.", cards: [] });
+      } finally {
+        budget.finish(ticket.visitor, cost.micros, cost.calls);
+      }
+    }
+    if (method === "GET" && sub === "/worksheet.csv") {
+      return sendText(res, 200, "text/csv; charset=utf-8", worksheetCsv(c, computeCase(c, tenantFor(user.username))), {
+        "Content-Disposition": `attachment; filename="${c.id}-worksheet.csv"`,
+      });
+    }
+    if (method === "GET" && sub === "/report") {
+      const view = caseView(user, c);
+      return sendText(res, 200, "text/html; charset=utf-8", reportHtml(c, computeCase(c, tenantFor(user.username)), view.totals.runs, view.timelineCheck));
+    }
+    throw new HttpError(404, "Not found.");
+  }
+
   async function handleApi(req: IncomingMessage, res: ServerResponse, path: string) {
     const method = req.method ?? "GET";
 
     if (method === "GET" && path === "/api/health") {
       return send(res, 200, { ok: true, engineVersion: ENGINE_VERSION, chat: useModel ? "model" : "rules" });
+    }
+
+    if (path.startsWith("/api/auth/") || path.startsWith("/api/workspace/")) {
+      return handleWorkspace(req, res, path, method);
     }
 
     if (method === "GET" && path === "/api/tools") {
@@ -229,6 +404,11 @@ export function createApp({ runLog, leads, useModel = modelConfigured(), trustPr
     if (method === "GET" && runMatch) {
       const stored = runLog.get(runMatch[1]!);
       if (!stored) throw new HttpError(404, "Penny has no record of that run.");
+      // Signed-in runs keep full inputs; only their own workspace can read them.
+      if (stored.tenant !== TENANT) {
+        const user = auth.user(sessionToken(req));
+        if (!user || tenantFor(user.username) !== stored.tenant) throw new HttpError(404, "Penny has no record of that run.");
+      }
       return send(res, 200, { run: stored });
     }
 

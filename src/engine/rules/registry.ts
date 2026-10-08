@@ -1,7 +1,7 @@
 import { auditChecklist2026 } from "./checklist.ts";
 import { classCodes2026 } from "./classCodes.ts";
 import { jurisdictions2026 } from "./jurisdictions.ts";
-import { officerPayroll2026, officerPayroll2026v2 } from "./officerPayroll.ts";
+import { officerPayroll2025, officerPayroll2026, officerPayroll2026v2 } from "./officerPayroll.ts";
 import { payrollCaps2026, payrollCaps2026Oct } from "./payrollCaps.ts";
 import type { RuleRef, RuleSet, RuleSetId } from "./types.ts";
 
@@ -12,6 +12,7 @@ import type { RuleRef, RuleSet, RuleSetId } from "./types.ts";
 const ALL: RuleSet<unknown>[] = [
   jurisdictions2026,
   classCodes2026,
+  officerPayroll2025,
   officerPayroll2026,
   officerPayroll2026v2,
   auditChecklist2026,

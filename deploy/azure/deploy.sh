@@ -17,6 +17,8 @@
 #   ANTHROPIC_KEY_VAULT_SECRET  alternative to ANTHROPIC_API_KEY: a versionless Key Vault secret URL the
 #                      app reads with its managed identity, so the key is never copied. The identity
 #                      needs Key Vault Secrets User on that secret.
+#   PENNY_USERS_FILE  file holding a JSON list of workspace accounts (from scripts/hash-password.ts);
+#                      stored as a Container App secret. Without it the workspace sign-in stays closed.
 #   PENNY_LEAD_WEBHOOK URL that gets each new sign-up (Teams / Power Automate); stored as a secret
 #   PENNY_CHAT_DAILY_USD         whole-site model chat spend per UTC day, dollars (default 10)
 #   PENNY_CHAT_VISITOR_USD       one visitor's model chat spend per day (default 0.50)
@@ -29,6 +31,10 @@ export MSYS_NO_PATHCONV=1
 
 : "${ACR_NAME:?Set ACR_NAME to the Azure Container Registry name (no .azurecr.io)}"
 RESOURCE_GROUP="${RESOURCE_GROUP:-rg-penny}"
+if [[ -n "${PENNY_USERS_FILE:-}" ]]; then
+  PENNY_USERS="$(tr -d '\r\n' <"$PENNY_USERS_FILE")"
+  [[ "$PENNY_USERS" == \[* ]] || PENNY_USERS="[${PENNY_USERS}]"
+fi
 APP_NAME="${APP_NAME:-penny-web}"
 ENV_NAME="${ENV_NAME:-penny-env}"
 IDENTITY_NAME="${IDENTITY_NAME:-id-penny-web}"
@@ -132,7 +138,7 @@ YAML
       - server: ${ACR_SERVER}
         identity: ${IDENTITY_ID}
 YAML
-  if [[ -n "${ANTHROPIC_API_KEY:-}" || -n "${ANTHROPIC_KEY_VAULT_SECRET:-}" || -n "${PENNY_LEAD_WEBHOOK:-}" ]]; then
+  if [[ -n "${ANTHROPIC_API_KEY:-}" || -n "${ANTHROPIC_KEY_VAULT_SECRET:-}" || -n "${PENNY_LEAD_WEBHOOK:-}" || -n "${PENNY_USERS:-}" ]]; then
     echo "    secrets:"
     if [[ -n "${ANTHROPIC_KEY_VAULT_SECRET:-}" ]]; then
       printf '      - name: anthropic-api-key\n        keyVaultUrl: %s\n        identity: %s\n' "$ANTHROPIC_KEY_VAULT_SECRET" "$IDENTITY_ID"
@@ -140,6 +146,8 @@ YAML
       printf '      - name: anthropic-api-key\n        value: "%s"\n' "$ANTHROPIC_API_KEY"
     fi
     [[ -n "${PENNY_LEAD_WEBHOOK:-}" ]] && printf '      - name: lead-webhook\n        value: "%s"\n' "$PENNY_LEAD_WEBHOOK"
+    # Single-quoted YAML scalar, so the JSON's double quotes pass through untouched.
+    [[ -n "${PENNY_USERS:-}" ]] && printf "      - name: penny-users\n        value: '%s'\n" "${PENNY_USERS//\'/\'\'}"
   fi
   cat <<YAML
   template:
@@ -158,6 +166,8 @@ YAML
             value: "1"
           - name: PENNY_CHAT_BUDGET
             value: /data/chat-budget.json
+          - name: PENNY_WORKSPACE
+            value: /data/workspace.json
           - name: PENNY_CHAT_DAILY_USD
             value: "${PENNY_CHAT_DAILY_USD:-10}"
           - name: PENNY_CHAT_VISITOR_USD
@@ -167,6 +177,7 @@ YAML
 YAML
   [[ -n "${ANTHROPIC_API_KEY:-}" || -n "${ANTHROPIC_KEY_VAULT_SECRET:-}" ]] && printf '          - name: ANTHROPIC_API_KEY\n            secretRef: anthropic-api-key\n'
   [[ -n "${PENNY_LEAD_WEBHOOK:-}" ]] && printf '          - name: PENNY_LEAD_WEBHOOK\n            secretRef: lead-webhook\n'
+  [[ -n "${PENNY_USERS:-}" ]] && printf '          - name: PENNY_USERS\n            secretRef: penny-users\n'
   cat <<YAML
         volumeMounts:
           - volumeName: data
@@ -196,7 +207,7 @@ YAML
 
 if [[ "$DRY_RUN" == "1" ]]; then
   echo "--- app spec (secret values redacted) ---"
-  awk '/name: (anthropic-api-key|lead-webhook)$/ { print; getline; sub(/value: .*/, "value: \"<redacted>\""); } { print }' "$SPEC"
+  awk '/name: (anthropic-api-key|lead-webhook|penny-users)$/ { print; getline; sub(/value: .*/, "value: \"<redacted>\""); } { print }' "$SPEC"
   exit 0
 fi
 
