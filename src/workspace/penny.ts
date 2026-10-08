@@ -37,7 +37,7 @@ Limits:
 Help (how the workspace works):
 - Left rail: your queue (due this week, in review, waiting on insured, open flags) and the case list.
 - Overview starts with the description of operations, which the audit report requires; Edit to write it, or ask Penny to draft one.
-- Center: the case header with the status stepper and Next step button, the summary strip (estimated audit premium, deposit, difference, flags, findings), and tabs: Overview (payroll by class, premium steps, receipts), Worksheet (every payroll line with source, edit, keep-as-is for flags, bulk move to class), Officers & subs (include or exclude officers, treat subs as insured or uninsured), Documents (sample records and what cites them; uploads are off in the preview), Findings (accept, reject, reopen), Timeline (every change with who, when, before and after, reason and premium effect; undo; notes; the hash chain check), Reports (printable audit report, worksheet CSV for Excel).
+- Center: the case header with the status stepper and Next step button, the summary strip (estimated audit premium, deposit, difference, flags, findings), and tabs: Overview (payroll by class, premium steps, receipts), Worksheet (grouped by class code; expand a class to see each worker and that class's subcontractors with certificate coverage over the policy term, and a Request COI button that drafts a certificate request to copy or email; edit, keep-as-is for flags, bulk move to class), Officers & subs (include or exclude officers, treat subs as insured or uninsured), Documents (sample records and what cites them; uploads are off in the preview), Findings (accept, reject, reopen), Timeline (every change with who, when, before and after, reason and premium effect; undo; notes; the hash chain check), Reports (printable audit report, worksheet CSV for Excel).
 - Every change needs a reason when it moves money, is recorded on the timeline, and can be undone with a new event. Nothing is deleted.
 - Receipts: each total comes from an engine run with a fingerprint and rule versions, so it can be reproduced.
 - Reset sample data (bottom of the left rail) puts the sample cases back to the start.`;
@@ -54,7 +54,7 @@ const PROPOSE_TOOL: Anthropic.Beta.BetaTool = {
         description:
           `One workspace action. type is one of ${ACTION_TYPES.join(", ")}. Fields: set_status {status (one of: ${AUDIT_STATUSES.join(", ")}), reason?}; ` +
           "update_line {lineId, classCode?, payroll?, overtimePremium?, overtimeExcluded?, reason}; set_officer {officerId, status? included|excluded, classCode?, reason}; " +
-          "set_sub {subId, treatment? insured|uninsured, classCode?, reason}; set_finding {findingId, status open|accepted|rejected, reason?}; clear_flag {lineId, reason}; add_note {text}; set_operations {text, reason?} (the description of operations); undo {seq}. " +
+          "set_sub {subId, treatment? insured|uninsured, classCode?, reason}; set_finding {findingId, status open|accepted|rejected, reason?}; clear_flag {lineId, reason}; add_note {text}; set_operations {text, reason?} (the description of operations); request_coi {subId} (records that a certificate was requested; the person sends the drafted request); undo {seq}." +
           "Dollar amounts are plain decimals like \"52000.00\".",
         properties: { type: { type: "string", enum: [...ACTION_TYPES] } },
         required: ["type"],
@@ -94,7 +94,7 @@ function caseContext(c: Case, tenant: string): string {
     lines: c.lines.map((l) => ({ ...l, counted: t.lines[l.id]!.counted.display, overtimeLeftOut: t.lines[l.id]!.overtimeLeftOut.display, capped: t.lines[l.id]!.capped })),
     officers: c.officers.map((o, i) => ({ ...o, counted: t.officers.people[i]!.countedPayroll.display, why: t.officers.people[i]!.reason })),
     officerRules: { limits: t.officers.limits, stateRules: t.officers.stateRules, warnings: t.officers.warnings },
-    subs: c.subs,
+    subs: c.subs.map((s) => ({ ...s, certificateCoverage: t.subs[s.id] })),
     documents: c.documents,
     findings: c.findings,
     payrollByClass: t.byClass.map((b) => ({ class: b.classCode, title: b.title, employees: b.employees.display, officers: b.officers.display, uninsuredSubs: b.uninsuredSubs.display, total: b.payroll.display, estimatedAtBinding: b.estimated?.display })),

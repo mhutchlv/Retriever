@@ -161,7 +161,7 @@
     var strip = '<div class="strip">' +
       '<div><small>Estimated audit premium</small><b>' + esc(money(est.totalAuditPremium)) + "</b></div>" +
       '<div><small>Deposit premium</small><b>' + esc(cmp && cmp.depositPremium ? money(cmp.depositPremium) : fmtDec(c.depositPremium)) + "</b></div>" +
-      '<div><small>Difference</small><b>' + esc(cmp ? money(cmp.difference) : "—") + '</b><span class="sub">' + esc(cmp ? cmp.result : "") + "</span></div>" +
+      '<div><small>' + esc(!cmp ? "Difference" : cmp.result === "return premium" ? "Return premium" : cmp.result === "additional premium" ? "Additional premium due" : "No change") + "</small><b>" + esc(cmp ? money(cmp.difference) : "—") + '</b><span class="sub">vs. deposit</span></div>' +
       '<div><small>Open flags</small><b>' + esc(t.openFlags != null ? t.openFlags : "—") + "</b></div>" +
       '<div><small>Open findings</small><b>' + esc(t.openFindings != null ? t.openFindings : "—") + "</b></div></div>";
 
@@ -182,7 +182,7 @@
   }
 
   function table(head, rows, cls) {
-    return '<div class="tablebox"><table class="ws"><thead><tr>' + head.map(function (h) {
+    return '<div class="tablebox"><table class="ws' + (cls ? " " + cls : "") + '"><thead><tr>' + head.map(function (h) {
       var n = h.charAt(0) === "#";
       return '<th scope="col"' + (n ? ' class="num"' : "") + ">" + esc(n ? h.slice(1) : h) + "</th>";
     }).join("") + "</tr></thead><tbody>" + (rows.join("") || '<tr><td colspan="' + head.length + '" class="muted">Nothing here yet.</td></tr>') + "</tbody></table></div>";
@@ -241,35 +241,154 @@
   }
   function setBy(s) { return s === "person" ? "Person" : (s === "penny-for-person" ? "Penny, for a person" : "Penny"); }
 
+  /* Certificate coverage of one sub over the policy term, as a badge. */
+  function coiBadge(subId) {
+    var cov = (T().subs || {})[subId];
+    if (!cov) return "";
+    if (cov.status === "full") return '<span class="coi ok">Covers the full term</span>';
+    if (cov.status === "none") return '<span class="coi bad">No COI on file</span>';
+    return '<span class="coi warn">Not covered ' + cov.gaps.map(function (g) { return esc(fmtDate(g.from)) + " to " + esc(fmtDate(g.to)); }).join(" and ") + "</span>";
+  }
+  function coiDocs(s) {
+    return (s.cois || []).map(function (x) { return chip(x.doc) + '<span class="small muted"> ' + esc(fmtDate(x.from)) + " to " + esc(fmtDate(x.to)) + "</span>"; }).join("<br>");
+  }
+  function coiButton(s) {
+    var cov = (T().subs || {})[s.id];
+    var asked = s.coiRequestedAt ? '<div class="small muted">Requested ' + esc(fmtDate(s.coiRequestedAt)) + "</div>" : "";
+    if (cov && cov.status === "full") return asked;
+    return '<button class="btn sm" type="button" data-act="reqcoi" data-id="' + esc(s.id) + '">' + (s.coiRequestedAt ? "Request again" : "Request COI") + "</button>" + asked;
+  }
+
+  function lineRows(l, tl) {
+    var cnt = tl[l.id] || {}, rows = [];
+    rows.push('<tr data-rowid="' + esc(l.id) + '"' + (S.sel[l.id] ? ' class="sel"' : "") + '><td><input type="checkbox" data-act="selrow" data-id="' + esc(l.id) + '" aria-label="Select ' + esc(l.payee) + '"' + (S.sel[l.id] ? " checked" : "") + "></td>" +
+      "<td>" + esc(l.payee) + '<div class="small muted">' + esc(l.title) + '</div></td><td class="num">' + esc(fmtDec(l.payroll)) +
+      '</td><td class="num">' + esc(fmtDec(l.overtimePremium)) + '<div class="small muted">' + (l.overtimeExcluded ? "left out" : "included") + "</div></td>" +
+      '<td class="num">' + esc(money(cnt.counted)) + (cnt.capped ? '<div><span class="spill side">capped</span></div>' : "") + "</td><td>" + srcLink(l.source) + '<div class="small muted">Set by ' + esc(setBy(l.setBy).toLowerCase()) + "</div></td>" +
+      '<td><div class="rowact"><button class="iconbtn" type="button" data-act="editline" data-id="' + esc(l.id) + '">Edit</button>' +
+      (l.flag ? '<button class="iconbtn" type="button" data-act="keepline" data-id="' + esc(l.id) + '">Keep as is</button>' : "") + "</div></td></tr>");
+    if (l.flag) rows.push('<tr class="flagrow"><td></td><td colspan="6"><span class="flagicon" aria-hidden="true">⚑</span><span class="sr">Flag: </span>' + esc(l.flag) + "</td></tr>");
+    if (S.editLine === l.id) {
+      rows.push('<tr class="ed"><td colspan="7"><div class="edgrid">' +
+        '<label>Class code<input id="ed-class" type="text" size="8" value="' + esc(l.classCode) + '"></label>' +
+        '<label>Gross payroll<input id="ed-pay" type="text" inputmode="decimal" size="12" value="' + esc(l.payroll) + '"></label>' +
+        '<label>Overtime premium<input id="ed-ot" type="text" inputmode="decimal" size="10" value="' + esc(l.overtimePremium) + '"></label>' +
+        '<label class="chk"><input id="ed-otx" type="checkbox"' + (l.overtimeExcluded ? " checked" : "") + "> Leave overtime premium out</label>" +
+        '<label class="reason">Reason (required)<input id="ed-reason" type="text" maxlength="300"></label>' +
+        '<button class="btn sm" type="button" data-act="saveline" data-id="' + esc(l.id) + '">Save</button>' +
+        '<button class="iconbtn" type="button" data-act="cancelline">Cancel</button></div></td></tr>');
+    }
+    return rows;
+  }
+
   function tabWorksheet() {
-    var c = C(), t = T(), lines = c.lines || [], tl = t.lines || {};
+    var c = C(), t = T(), tl = t.lines || {}, est = t.estimate || {};
     var nsel = Object.keys(S.sel).length;
+    var people = (t.officers && t.officers.people) || [];
+    var codes = {};
+    (t.byClass || []).forEach(function (b) { codes[b.classCode] = true; });
+    (c.lines || []).forEach(function (l) { codes[l.classCode] = true; });
+    (c.officers || []).forEach(function (o) { codes[o.classCode] = true; });
+    (c.subs || []).forEach(function (x) { codes[x.classCode] = true; });
+    var list = Object.keys(codes).sort();
+    if (!S.open) S.open = {};
+    // A link to a line, officer or sub opens its class.
+    if (S.hl) {
+      var hit = (c.lines || []).concat(c.officers || [], c.subs || []).filter(function (x) { return x.id === S.hl; })[0];
+      if (hit) S.open[hit.classCode] = true;
+    }
+    var allOpen = list.every(function (k) { return S.open[k]; });
+
     var out = '<div class="bulk"><span><b>' + nsel + "</b> selected</span>" +
       '<label class="sr" for="bk-class">Class code</label><input id="bk-class" type="text" size="8" placeholder="Class code">' +
       '<label class="sr" for="bk-reason">Reason</label><input id="bk-reason" type="text" placeholder="Reason (required)" maxlength="300">' +
-      '<button class="btn sm" type="button" data-act="bulkmove"' + (nsel ? "" : " disabled") + ">Move to class</button></div>";
-    var rows = [];
-    lines.forEach(function (l) {
-      var cnt = tl[l.id] || {};
-      rows.push('<tr data-rowid="' + esc(l.id) + '"' + (S.sel[l.id] ? ' class="sel"' : "") + '><td><input type="checkbox" data-act="selrow" data-id="' + esc(l.id) + '" aria-label="Select ' + esc(l.payee) + '"' + (S.sel[l.id] ? " checked" : "") + "></td>" +
-        "<td>" + esc(l.payee) + '<div class="small muted">' + esc(l.title) + "</div></td><td>" + esc(l.classCode) + '</td><td class="num">' + esc(fmtDec(l.payroll)) +
-        '</td><td class="num">' + esc(fmtDec(l.overtimePremium)) + '<div class="small muted">' + (l.overtimeExcluded ? "left out" : "included") + "</div></td>" +
-        '<td class="num">' + esc(money(cnt.counted)) + (cnt.capped ? ' <span class="spill side">capped</span>' : "") + "</td><td>" + srcLink(l.source) + "</td><td>" + esc(setBy(l.setBy)) + "</td>" +
-        "<td>" + (l.flag ? '<span class="warncell" aria-hidden="true">⚑</span> <span class="sr">Flag:</span>' + esc(l.flag) : "") + "</td>" +
-        '<td><div class="rowact"><button class="iconbtn" type="button" data-act="editline" data-id="' + esc(l.id) + '">Edit</button>' +
-        (l.flag ? '<button class="iconbtn" type="button" data-act="keepline" data-id="' + esc(l.id) + '">Keep as is</button>' : "") + "</div></td></tr>");
-      if (S.editLine === l.id) {
-        rows.push('<tr class="ed"><td colspan="10"><div class="edgrid">' +
-          '<label>Class code<input id="ed-class" type="text" size="8" value="' + esc(l.classCode) + '"></label>' +
-          '<label>Gross payroll<input id="ed-pay" type="text" inputmode="decimal" size="12" value="' + esc(l.payroll) + '"></label>' +
-          '<label>Overtime premium<input id="ed-ot" type="text" inputmode="decimal" size="10" value="' + esc(l.overtimePremium) + '"></label>' +
-          '<label class="chk"><input id="ed-otx" type="checkbox"' + (l.overtimeExcluded ? " checked" : "") + "> Leave overtime premium out</label>" +
-          '<label class="reason">Reason (required)<input id="ed-reason" type="text" maxlength="300"></label>' +
-          '<button class="btn sm" type="button" data-act="saveline" data-id="' + esc(l.id) + '">Save</button>' +
-          '<button class="iconbtn" type="button" data-act="cancelline">Cancel</button></div></td></tr>');
+      '<button class="btn sm" type="button" data-act="bulkmove"' + (nsel ? "" : " disabled") + ">Move to class</button>" +
+      '<span class="spacer"></span><button class="iconbtn" type="button" data-act="openall" data-to="' + (allOpen ? "close" : "open") + '">' + (allOpen ? "Collapse all" : "Expand all") + "</button></div>";
+
+    list.forEach(function (code) {
+      var bc = (t.byClass || []).filter(function (b) { return b.classCode === code; })[0] || {};
+      var el = (est.lines || []).filter(function (x) { return x.classCode === code; })[0];
+      var rate = c.rates && c.rates[code];
+      var lines = (c.lines || []).filter(function (l) { return l.classCode === code; });
+      var offs = (c.officers || []).map(function (o, i) { return { o: o, p: people[i] || {} }; }).filter(function (x) { return x.o.classCode === code; });
+      var subs = (c.subs || []).filter(function (x) { return x.classCode === code; });
+      var flags = lines.filter(function (l) { return l.flag; }).length;
+      var coiIssues = subs.filter(function (x) { var cv = (t.subs || {})[x.id]; return cv && cv.status !== "full"; }).length;
+      var open = !!S.open[code];
+      var workers = lines.length + offs.length;
+
+      out += '<section class="cls' + (open ? " open" : "") + '">' +
+        '<button type="button" class="clshead" data-act="toggleclass" data-cls="' + esc(code) + '" aria-expanded="' + open + '">' +
+        '<span class="caret" aria-hidden="true">' + (open ? "▾" : "▸") + "</span>" +
+        '<span class="clsname"><b>' + esc(code) + "</b> " + esc(rate ? rate.title : bc.title || "Not on the policy") + "</span>" +
+        '<span class="clsmeta">' + workers + " worker" + (workers === 1 ? "" : "s") + (subs.length ? " · " + subs.length + " sub" + (subs.length === 1 ? "" : "s") : "") +
+        (flags ? ' <span class="spill flag">' + flags + " flag" + (flags === 1 ? "" : "s") + "</span>" : "") +
+        (coiIssues ? ' <span class="spill coiwarn">' + coiIssues + " COI gap" + (coiIssues === 1 ? "" : "s") + "</span>" : "") + "</span>" +
+        '<span class="clsnum"><small>Payroll</small>' + esc(bc.payroll ? money(bc.payroll) : "$0.00") + "</span>" +
+        '<span class="clsnum"><small>Rate</small>' + esc(rate ? rate.rate : "none") + "</span>" +
+        '<span class="clsnum"><small>Premium</small>' + esc(el ? money(el.premium) : "—") + "</span></button>";
+
+      if (open) {
+        var rows = [];
+        lines.forEach(function (l) { rows = rows.concat(lineRows(l, tl)); });
+        offs.forEach(function (x) {
+          rows.push('<tr data-rowid="' + esc(x.o.id) + '"><td></td><td>' + esc(x.o.name) + '<div class="small muted">Officer · ' + esc(x.o.title) + " · " + (x.o.status === "included" ? "included" : "excluded") + '</div></td><td class="num">' + esc(fmtDec(x.o.payroll)) +
+            '</td><td class="num">—</td><td class="num">' + esc(money(x.p.countedPayroll)) + "</td><td>" + srcLink(x.o.source) +
+            '</td><td><div class="rowact"><button class="iconbtn" type="button" data-act="ref" data-ref="' + esc(x.o.id) + '">Details</button></div></td></tr>');
+          if (x.p.reason) rows.push('<tr class="noterow"><td></td><td colspan="6">' + esc(x.p.reason) + "</td></tr>");
+        });
+        if (rows.length) {
+          out += table(["", "Worker", "#Gross payroll", "#Overtime premium", "#Counted", "Source", "Actions"], rows, "clstable");
+        } else {
+          out += '<p class="small muted pad">No employees or officers in this class.</p>';
+        }
+        if (subs.length) {
+          out += '<div class="subarea"><h4>Subcontractors in ' + esc(code) + "</h4>" +
+            table(["Subcontractor", "#Paid", "Certificate coverage", "Certificates on file", "Treatment", "Actions"], subs.map(function (x) {
+              var uni = x.treatment === "uninsured";
+              return '<tr data-rowid="' + esc(x.id) + '"><td>' + esc(x.name) + '<div class="small muted">' + esc(x.work) + '</div></td><td class="num">' + esc(fmtDec(x.paid)) + "</td><td>" + coiBadge(x.id) +
+                "</td><td>" + (coiDocs(x) || '<span class="small muted">None</span>') + "</td><td>" + (uni ? "Uninsured: counted as payroll" : "Insured") + "</td>" +
+                '<td><div class="rowact">' + coiButton(x) + '<button class="iconbtn" type="button" data-act="subtoggle" data-id="' + esc(x.id) + '" data-to="' + (uni ? "insured" : "uninsured") + '">Treat as ' + (uni ? "insured" : "uninsured") + "</button></div></td></tr>";
+            }), "subtable") + "</div>";
+        }
       }
+      out += "</section>";
     });
-    return out + table(["", "Payee", "Class", "#Gross payroll", "#Overtime premium", "#Counted", "Source", "Set by", "Flag", "Actions"], rows);
+    return out;
+  }
+
+  /* ---------- certificate request ---------- */
+  function showCoiRequest(subId) {
+    api("/api/workspace/cases/" + encodeURIComponent(S.caseId) + "/coi-request/" + encodeURIComponent(subId)).then(function (r) {
+      var sub = (C().subs || []).filter(function (x) { return x.id === subId; })[0] || {};
+      var box = document.createElement("div");
+      box.className = "modal";
+      box.setAttribute("role", "dialog");
+      box.setAttribute("aria-modal", "true");
+      box.setAttribute("aria-labelledby", "coi-h");
+      var mail = "mailto:?subject=" + encodeURIComponent(r.subject) + "&body=" + encodeURIComponent(r.body);
+      box.innerHTML = '<div class="modalcard"><h3 id="coi-h">Request a certificate from ' + esc(sub.name) + "</h3>" +
+        '<p class="small muted">The preview doesn\'t send email. Copy the request or open it in your email, then mark it as requested so it\'s on the timeline.</p>' +
+        '<label>Subject<input id="coi-subj" type="text" readonly value="' + esc(r.subject) + '"></label>' +
+        '<label>Message<textarea id="coi-body" rows="14" readonly>' + esc(r.body) + "</textarea></label>" +
+        '<div class="modalbtns"><button class="btn ghost sm" type="button" id="coi-copy">Copy</button>' +
+        '<a class="btn ghost sm" id="coi-mail" href="' + esc(mail) + '">Open in email</a>' +
+        '<button class="btn sm" type="button" id="coi-mark">Mark as requested</button>' +
+        '<button class="iconbtn" type="button" id="coi-close">Close</button></div></div>';
+      document.body.appendChild(box);
+      var close = function () { if (box.parentNode) box.parentNode.removeChild(box); };
+      var mark = function () { act({ type: "request_coi", subId: subId }).then(function (res) { if (res) { close(); toast("Marked as requested."); } }); };
+      box.querySelector("#coi-close").addEventListener("click", close);
+      box.addEventListener("keydown", function (e) { if (e.key === "Escape") close(); });
+      box.querySelector("#coi-copy").addEventListener("click", function () {
+        var text = "Subject: " + r.subject + "\n\n" + r.body;
+        var manual = function () { var t = box.querySelector("#coi-body"); t.focus(); t.select(); toast("Press Ctrl+C to copy the selected message.", true); };
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function () { toast("Copied."); }, manual);
+        else manual();
+      });
+      box.querySelector("#coi-mark").addEventListener("click", mark);
+      box.querySelector("#coi-copy").focus();
+    }).catch(function (e) { toast(e.message, true); });
   }
 
   function tabOfficers() {
@@ -295,13 +414,11 @@
       if (sr.citations && sr.citations.length) out += '<p class="small muted">Citations: ' + esc(sr.citations.join("; ")) + "</p>";
     }
     var pol = c.policyExpirationDate;
-    out += "<h3>Subcontractors</h3>" + table(["Name", "Work", "Class", "#Paid", "Certificate expires", "Treatment", "Source", "Actions"], (c.subs || []).map(function (s) {
-      var lapsed = s.coiExpires && pol && s.coiExpires < pol;
+    out += "<h3>Subcontractors</h3>" + table(["Name", "Work", "Class", "#Paid", "Certificate coverage", "Treatment", "Source", "Actions"], (c.subs || []).map(function (s) {
       var uni = s.treatment === "uninsured";
-      return '<tr data-rowid="' + esc(s.id) + '"><td>' + esc(s.name) + "</td><td>" + esc(s.work) + "</td><td>" + esc(s.classCode) + '</td><td class="num">' + esc(fmtDec(s.paid)) + "</td><td>" +
-        (s.coiExpires ? (lapsed ? '<span class="warncell">' + esc(fmtDate(s.coiExpires)) + " (before policy ends)</span>" : esc(fmtDate(s.coiExpires))) : "None on file") +
-        "</td><td>" + (uni ? "Uninsured" : "Insured") + "</td><td>" + srcLink(s.source) + "</td>" +
-        '<td><div class="rowact"><button class="iconbtn" type="button" data-act="subtoggle" data-id="' + esc(s.id) + '" data-to="' + (uni ? "insured" : "uninsured") + '">Treat as ' + (uni ? "insured" : "uninsured") + "</button>" +
+      return '<tr data-rowid="' + esc(s.id) + '"><td>' + esc(s.name) + "</td><td>" + esc(s.work) + "</td><td>" + esc(s.classCode) + '</td><td class="num">' + esc(fmtDec(s.paid)) + "</td><td>" + coiBadge(s.id) +
+        (coiDocs(s) ? '<div class="small">' + coiDocs(s) + "</div>" : "") + "</td><td>" + (uni ? "Uninsured" : "Insured") + "</td><td>" + srcLink(s.source) + "</td>" +
+        '<td><div class="rowact">' + coiButton(s) + '<button class="iconbtn" type="button" data-act="subtoggle" data-id="' + esc(s.id) + '" data-to="' + (uni ? "insured" : "uninsured") + '">Treat as ' + (uni ? "insured" : "uninsured") + "</button>" +
         '<button class="iconbtn" type="button" data-act="subclass" data-id="' + esc(s.id) + '">Change class</button></div></td></tr>';
     }));
     return out;
@@ -385,7 +502,7 @@
   }
 
   function loadCase(id) {
-    S.caseId = id; S.sel = {}; S.editLine = null; S.editOps = false; S.data = null;
+    S.caseId = id; S.sel = {}; S.editLine = null; S.editOps = false; S.open = {}; S.data = null;
     center.innerHTML = '<p class="muted pad">Loading…</p>';
     renderRail(); renderChat(); location.hash = "case=" + encodeURIComponent(id);
     return api("/api/workspace/cases/" + encodeURIComponent(id)).then(function (res) {
@@ -430,6 +547,14 @@
       if (r) a.reason = r;
       act(a);
     },
+    toggleclass: function (b) { var k = b.getAttribute("data-cls"); S.open = S.open || {}; S.open[k] = !S.open[k]; renderCenter(true); },
+    openall: function (b) {
+      var open = b.getAttribute("data-to") === "open", c = C();
+      S.open = {};
+      if (open) (c.lines || []).concat(c.officers || [], c.subs || []).forEach(function (x) { S.open[x.classCode] = true; }), (T().byClass || []).forEach(function (x) { S.open[x.classCode] = true; });
+      renderCenter(true);
+    },
+    reqcoi: function (b, id) { showCoiRequest(id); },
     editops: function () { S.editOps = true; renderCenter(true); var i = $("ops-in"); if (i) i.focus(); },
     cancelops: function () { S.editOps = false; renderCenter(true); },
     saveops: function () {

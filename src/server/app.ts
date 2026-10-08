@@ -12,7 +12,7 @@ import type { LeadSink } from "../leads/store.ts";
 import { Auth, clearedCookie, readCookie, SESSION_COOKIE, sessionCookie, type SessionUser } from "../auth/auth.ts";
 import { workspaceChat } from "../workspace/penny.ts";
 import { computeCase, type Case } from "../workspace/model.ts";
-import { reportHtml, worksheetCsv } from "../workspace/exports.ts";
+import { coiRequestText, reportHtml, worksheetCsv } from "../workspace/exports.ts";
 import { parseAction, tenantFor, verifyTimeline, WorkspaceStore } from "../workspace/store.ts";
 import type { RunLog } from "../runlog/store.ts";
 
@@ -273,6 +273,15 @@ export function createApp({
     if (method === "POST" && path === "/api/workspace/reset") {
       workspace.reset(user.username);
       return send(res, 200, { ok: true });
+    }
+
+    const coi = path.match(/^\/api\/workspace\/cases\/([A-Za-z0-9-]{1,30})\/coi-request\/([A-Za-z0-9]{1,20})$/);
+    if (method === "GET" && coi) {
+      const cc = workspace.get(user.username, coi[1]!);
+      const s = cc?.subs.find((x) => x.id === coi[2]);
+      if (!cc || !s) throw new HttpError(404, "No such subcontractor.");
+      const cov = computeCase(cc, tenantFor(user.username)).subs[s.id]!;
+      return send(res, 200, { coverage: cov, ...coiRequestText(cc, s, cov, user.displayName) });
     }
 
     const m = path.match(/^\/api\/workspace\/cases\/([A-Za-z0-9-]{1,30})(\/[a-z.]+)?$/);

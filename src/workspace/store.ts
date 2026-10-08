@@ -20,9 +20,10 @@ export type Action =
   | { type: "clear_flag"; lineId: string; reason: string }
   | { type: "add_note"; text: string }
   | { type: "set_operations"; text: string; reason?: string }
+  | { type: "request_coi"; subId: string }
   | { type: "undo"; seq: number };
 
-export const ACTION_TYPES = ["set_status", "update_line", "set_officer", "set_sub", "set_finding", "clear_flag", "add_note", "set_operations", "undo"] as const;
+export const ACTION_TYPES = ["set_status", "update_line", "set_officer", "set_sub", "set_finding", "clear_flag", "add_note", "set_operations", "request_coi", "undo"] as const;
 
 /** Statuses that produce or rely on the audit report, which needs a description of operations. */
 const REPORT_STATUSES: readonly AuditStatus[] = ["Draft ready", "Director review", "Submitted to carrier", "Final"];
@@ -93,6 +94,8 @@ export function parseAction(raw: unknown): Action {
       return { type, lineId: reqString(o.lineId, "lineId", 20), reason: reason(o.reason, true)! };
     case "add_note":
       return { type, text: reqString(o.text, "text", 2000) };
+    case "request_coi":
+      return { type, subId: reqString(o.subId, "subId", 20) };
     case "set_operations": {
       const r = reason(o.reason, false);
       return { type, text: reqString(o.text, "text", 4000), ...(r ? { reason: r } : {}) };
@@ -189,6 +192,12 @@ function mutate(c: Case, action: Action, actor: string): Mutation {
       delete l.flag;
       return { summary: `Flag cleared on ${l.payee}, kept as is`, target: `line:${l.id}`, before, after: { flag: undefined }, reason: action.reason, movesMoney: false };
     }
+    case "request_coi": {
+      const s = find(c.subs, action.subId, "subcontractor");
+      const before = { coiRequestedAt: s.coiRequestedAt };
+      s.coiRequestedAt = new Date().toISOString().slice(0, 10);
+      return { summary: `Certificate of insurance requested from ${s.name}`, target: `sub:${s.id}`, before, after: { coiRequestedAt: s.coiRequestedAt }, movesMoney: false };
+    }
     case "set_operations": {
       const before = { operations: c.operations ?? "" };
       c.operations = action.text;
@@ -261,7 +270,16 @@ export class WorkspaceStore {
         // Cases saved before the description of operations existed get the sample text.
         for (const [user, list] of Object.entries(this.data)) {
           const seeds = sampleCases(user);
-          for (const c of list) c.operations ??= seeds.find((s) => s.data.id === c.id)?.data.operations ?? "";
+          for (const c of list) {
+            const seed = seeds.find((s) => s.data.id === c.id)?.data;
+            c.operations ??= seed?.operations ?? "";
+            // Subcontractors saved before certificates had dates come back from the sample set.
+            if (c.subs.some((s) => !Array.isArray((s as { cois?: unknown }).cois))) {
+              c.subs = structuredClone(seed?.subs ?? []);
+              for (const d of seed?.documents ?? []) if (!c.documents.some((x) => x.id === d.id)) c.documents.push(d);
+              for (const f of seed?.findings ?? []) if (!c.findings.some((x) => x.id === f.id)) c.findings.push(f);
+            }
+          }
         }
       } catch (err) {
         console.error("workspace file unreadable; starting fresh", err);

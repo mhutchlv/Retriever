@@ -1,4 +1,4 @@
-import { dollars, type Case, type CaseTotals } from "./model.ts";
+import { dollars, type Case, type CaseTotals, type CoiCoverage, type Sub } from "./model.ts";
 
 // Work product built by deterministic code from the case and its engine runs.
 // The model never writes these.
@@ -25,7 +25,7 @@ export function worksheetCsv(c: Case, t: CaseTotals): string {
     out.push(row(["Officer", o.name, o.title, o.classCode, o.payroll, "", "", p.countedPayroll.display, "", srcText(o.source), o.status, p.reason]));
   });
   for (const s of c.subs) {
-    out.push(row(["Subcontractor", s.name, s.work, s.classCode, s.paid, "", "", s.treatment === "uninsured" ? dollars(s.paid) : "$0.00", "", srcText(s.source), s.treatment, s.coiExpires ? `COI expires ${s.coiExpires}` : "No COI"]));
+    out.push(row(["Subcontractor", s.name, s.work, s.classCode, s.paid, "", "", s.treatment === "uninsured" ? dollars(s.paid) : "$0.00", "", srcText(s.source), s.treatment, coverageText(t.subs[s.id]!)]));
   }
   out.push("");
   out.push(row(["Class", "Title", "Employees", "Officers", "Uninsured subs", "Total payroll", "Rate", "Premium"]));
@@ -41,6 +41,42 @@ export function worksheetCsv(c: Case, t: CaseTotals): string {
   out.push("");
   for (const r of t.runs) out.push(row(["Engine run", r.tool, r.fingerprint, r.dataStatus, r.rules.map((x) => `${x.id}@${x.version}`).join(" ")]));
   return out.join("\r\n") + "\r\n";
+}
+
+const usDate = (d: string) => {
+  const [y, m, day] = d.split("-");
+  return `${Number(m)}/${Number(day)}/${y}`;
+};
+
+/** "Covers the full policy term", "No certificate on file" or the uncovered dates. */
+export function coverageText(cov: CoiCoverage): string {
+  if (cov.status === "full") return "Covers the full policy term";
+  if (cov.status === "none") return "No certificate on file";
+  return `Not covered ${cov.gaps.map((g) => `${usDate(g.from)} to ${usDate(g.to)}`).join(" and ")}`;
+}
+
+/** A certificate request for one subcontractor, ready to copy into an email or letter. */
+export function coiRequestText(c: Case, s: Sub, cov: CoiCoverage, from: string): { subject: string; body: string } {
+  const need =
+    cov.status === "none"
+      ? `covering the full policy term, ${usDate(c.policyEffectiveDate)} to ${usDate(c.policyExpirationDate)}`
+      : `covering ${cov.gaps.map((g) => `${usDate(g.from)} to ${usDate(g.to)}`).join(" and ")}`;
+  return {
+    subject: `Certificate of insurance needed: ${c.insured} workers' comp audit`,
+    body: [
+      `Hello ${s.name},`,
+      "",
+      `We're completing the workers' compensation premium audit for ${c.insured} (policy ${c.policyNumber}, ${usDate(c.policyEffectiveDate)} to ${usDate(c.policyExpirationDate)}). Their records show payments to you for ${s.work.toLowerCase()}.`,
+      "",
+      `Please send a certificate of insurance showing your workers' compensation coverage ${need}, with ${c.insured} as the certificate holder. If you had no employees and no coverage, please tell us that instead.`,
+      "",
+      `Without a certificate, those payments may be counted as payroll on ${c.insured}'s audit. Please reply by ${usDate(c.dueDate)}.`,
+      "",
+      "Thank you,",
+      from,
+      `Premium auditor for ${c.carrier}`,
+    ].join("\n"),
+  };
 }
 
 const srcText = (s: { doc: string; page?: number; note?: string }) => `${s.doc}${s.page ? ` p.${s.page}` : ""}${s.note ? ` (${s.note})` : ""}`;
@@ -102,8 +138,8 @@ ${e.comparison ? `<tr>${td("Deposit premium")}${td("")}${td(e.comparison.deposit
 ${c.officers.map((o, i) => { const p = t.officers.people[i]!; return `<tr>${td(o.name)}${td(o.title)}${td(o.classCode)}${td(o.status)}${td(p.actualPayroll.display, "n")}${td(p.countedPayroll.display, "n")}${td(p.reason)}</tr>`; }).join("")}
 </tbody></table>
 ${t.officers.stateRules ? `<p class="small">${esc(t.officers.stateRules.citations.join("; "))}</p>` : ""}
-${c.subs.length ? `<h2>Subcontractors</h2><table><thead><tr><th>Name</th><th>Work</th><th>Class</th><th>Paid</th><th>Certificate expires</th><th>Treatment</th></tr></thead><tbody>
-${c.subs.map((s) => `<tr>${td(s.name)}${td(s.work)}${td(s.classCode)}${td(dollars(s.paid), "n")}${td(s.coiExpires ?? "none")}${td(s.treatment)}</tr>`).join("")}</tbody></table>` : ""}
+${c.subs.length ? `<h2>Subcontractors</h2><table><thead><tr><th>Name</th><th>Work</th><th>Class</th><th>Paid</th><th>Certificate coverage</th><th>Treatment</th></tr></thead><tbody>
+${c.subs.map((s) => `<tr>${td(s.name)}${td(s.work)}${td(s.classCode)}${td(dollars(s.paid), "n")}${td(coverageText(t.subs[s.id]!))}${td(s.treatment)}</tr>`).join("")}</tbody></table>` : ""}
 ${findings.length ? `<h2>Findings</h2><table><tbody>${findings.map((f) => `<tr>${td(f.status)}<td><b>${esc(f.title)}</b><br>${esc(f.detail)}</td></tr>`).join("")}</tbody></table>` : ""}
 ${t.cap ? `<p class="small">${esc(t.cap.note)}</p>` : ""}
 <h2>How these figures were produced</h2>

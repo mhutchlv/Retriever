@@ -5,7 +5,7 @@ import { Auth, hashPassword, verifyPassword, accountsFromEnv } from "../src/auth
 import { MemoryLeadSink } from "../src/leads/store.ts";
 import { MemoryRunLog } from "../src/runlog/store.ts";
 import { createApp } from "../src/server/app.ts";
-import { reportHtml, worksheetCsv } from "../src/workspace/exports.ts";
+import { coiRequestText, reportHtml, worksheetCsv } from "../src/workspace/exports.ts";
 import { computeCase } from "../src/workspace/model.ts";
 import { verifyTimeline, WorkspaceStore } from "../src/workspace/store.ts";
 
@@ -186,5 +186,30 @@ describe("description of operations", () => {
     assert.match(reportHtml(done, computeCase(done, "ws:tester"), [], { ok: true, events: 1 }), /Landscape installation and maintenance/);
     const missing = store.get("tester", "SRR-2026")!;
     assert.match(reportHtml(missing, computeCase(missing, "ws:tester"), [], { ok: true, events: 1 }), /Not written yet/);
+  });
+});
+
+describe("subcontractor certificates", () => {
+  it("finds gaps in certificate coverage over the policy term", () => {
+    const store = new WorkspaceStore();
+    const c = store.get("tester", "DRL-2026")!;
+    const t = computeCase(c, "ws:tester");
+    assert.deepEqual(t.subs.S1, { status: "partial", gaps: [{ from: "2026-03-31", to: "2026-10-01" }] });
+    assert.deepEqual(t.subs.S2, { status: "full", gaps: [] });
+    assert.equal(t.subs.S3!.status, "none");
+    const h = store.get("tester", "HEC-2026")!;
+    assert.deepEqual(computeCase(h, "ws:tester").subs.S1!.gaps, [{ from: "2026-08-01", to: "2026-08-15" }]);
+  });
+
+  it("drafts a request for the uncovered dates and records it", () => {
+    const store = new WorkspaceStore();
+    const c = store.get("tester", "DRL-2026")!;
+    const t = computeCase(c, "ws:tester");
+    const req = coiRequestText(c, c.subs[0]!, t.subs.S1!, "Test Auditor");
+    assert.match(req.body, /covering 3\/31\/2026 to 10\/1\/2026/);
+    assert.match(req.body, /Desert Ridge Landscaping LLC as the certificate holder/);
+    const e = store.apply("tester", "DRL-2026", { type: "request_coi", subId: "S3" }, "Test Auditor", "workspace");
+    assert.match(e.summary, /Mesa Concrete Curbing/);
+    assert.ok(store.get("tester", "DRL-2026")!.subs[2]!.coiRequestedAt);
   });
 });

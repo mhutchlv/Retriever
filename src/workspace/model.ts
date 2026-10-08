@@ -69,9 +69,41 @@ export interface Sub {
   work: string;
   classCode: string;
   paid: string;
-  coiExpires?: string;
+  /** Certificates of insurance on file, each with the coverage dates it shows. */
+  cois: Coi[];
+  /** Date a certificate was last requested, if one has been. */
+  coiRequestedAt?: string;
   treatment: "insured" | "uninsured";
   source: Source;
+}
+
+export interface Coi {
+  doc: string;
+  /** Coverage dates on the certificate, YYYY-MM-DD. */
+  from: string;
+  to: string;
+}
+
+export interface CoiCoverage {
+  status: "full" | "partial" | "none";
+  /** Parts of the policy term no certificate covers. */
+  gaps: { from: string; to: string }[];
+}
+
+/** Which parts of the policy term a sub's certificates cover. ISO dates compare as strings. */
+export function coiCoverage(s: Sub, termFrom: string, termTo: string): CoiCoverage {
+  if (!s.cois.length) return { status: "none", gaps: [{ from: termFrom, to: termTo }] };
+  const gaps: { from: string; to: string }[] = [];
+  let cursor = termFrom;
+  for (const c of [...s.cois].sort((a, b) => a.from.localeCompare(b.from))) {
+    if (c.to <= cursor) continue;
+    if (c.from > cursor) gaps.push({ from: cursor, to: c.from < termTo ? c.from : termTo });
+    cursor = c.to;
+    if (cursor >= termTo) break;
+  }
+  if (cursor < termTo) gaps.push({ from: cursor, to: termTo });
+  const real = gaps.filter((g) => g.from < g.to);
+  return { status: real.length ? "partial" : "full", gaps: real };
 }
 
 export interface Doc {
@@ -161,6 +193,8 @@ export interface LineCount {
 
 export interface CaseTotals {
   byClass: ClassTotal[];
+  /** Certificate coverage of each subcontractor over the policy term. */
+  subs: Record<string, CoiCoverage>;
   lines: Record<string, LineCount>;
   officers: OfficerPayrollOutput;
   estimate?: EstimatorOutput;
@@ -250,7 +284,11 @@ export function computeCase(c: Case, tenant: string): CaseTotals {
     if (capRow) estimate = { ...estimate, warnings: estimate.warnings.filter((w) => !w.startsWith(capRow.note)) };
   }
 
+  const subs: Record<string, CoiCoverage> = {};
+  for (const s of c.subs) subs[s.id] = coiCoverage(s, c.policyEffectiveDate, c.policyExpirationDate);
+
   return {
+    subs,
     byClass: codes.map((code) => {
       const b = byClass.get(code)!;
       const est = c.estimatedPayroll[code];

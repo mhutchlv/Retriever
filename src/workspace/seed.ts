@@ -81,8 +81,21 @@ export function sampleCases(username: string): SeedCase[] {
           { id: "O2", name: "Kim Duarte", title: "Manager (unpaid)", classCode: "8810", payroll: "0.00", status: "included", source: { doc: "D7", page: 1, note: "Operating agreement lists her as a manager" } },
         ] satisfies Officer[],
         subs: [
-          { id: "S1", name: "Rivera Hardscape", work: "Paver patios and walls", classCode: "0042", paid: "24800.00", coiExpires: "2026-03-31", treatment: "insured", source: { doc: "D8", page: 1 } },
-          { id: "S2", name: "Clearwater Tree Service", work: "Tree trimming", classCode: "0042", paid: "9600.00", coiExpires: "2027-01-15", treatment: "insured", source: { doc: "D9", page: 1 } },
+          { id: "S1", name: "Rivera Hardscape", work: "Paver patios and walls", classCode: "0042", paid: "24800.00", cois: [{ doc: "D8", from: "2025-04-01", to: "2026-03-31" }], treatment: "insured", source: { doc: "D7", page: 9 } },
+          {
+            id: "S2",
+            name: "Clearwater Tree Service",
+            work: "Tree trimming",
+            classCode: "0042",
+            paid: "9600.00",
+            cois: [
+              { doc: "D9", from: "2025-01-15", to: "2026-01-15" },
+              { doc: "D11", from: "2026-01-15", to: "2027-01-15" },
+            ],
+            treatment: "insured",
+            source: { doc: "D7", page: 11 },
+          },
+          { id: "S3", name: "Mesa Concrete Curbing", work: "Concrete mow curbs", classCode: "0042", paid: "6400.00", cois: [], treatment: "insured", source: { doc: "D7", page: 14 } },
         ] satisfies Sub[],
         documents: [
           doc("D1", "Payroll register, Oct 2025 to Sep 2026", "Payroll register", "10/2025-9/2026", 12),
@@ -93,8 +106,9 @@ export function sampleCases(username: string): SeedCase[] {
           doc("D6", "Nevada quarterly wage reports", "State wage report", "Q4 2025-Q3 2026", 4),
           doc("D7", "General ledger, cash disbursements", "Ledger", "10/2025-9/2026", 22),
           doc("D8", "Certificate of insurance: Rivera Hardscape", "Certificate", "4/1/2025-3/31/2026", 1),
-          doc("D9", "Certificate of insurance: Clearwater Tree Service", "Certificate", "1/15/2026-1/15/2027", 1),
+          doc("D9", "Certificate of insurance: Clearwater Tree Service", "Certificate", "1/15/2025-1/15/2026", 1),
           doc("D10", "Job description: Tom Becker", "Job description", "Current", 1),
+          doc("D11", "Certificate of insurance: Clearwater Tree Service (renewal)", "Certificate", "1/15/2026-1/15/2027", 1),
         ],
         findings: [
           {
@@ -125,6 +139,13 @@ export function sampleCases(username: string): SeedCase[] {
             status: "open",
             refs: ["D4", "D1"],
           },
+          {
+            id: "F5",
+            title: "No certificate on file for Mesa Concrete Curbing",
+            detail: "The ledger shows payments to Mesa for concrete curbing and no certificate of insurance. Request one covering the whole policy term.",
+            status: "open",
+            refs: ["S3", "D7"],
+          },
         ] satisfies Finding[],
         notes: [],
       },
@@ -132,7 +153,7 @@ export function sampleCases(username: string): SeedCase[] {
         { action: "assigned", summary: `Case assigned to ${username}`, actor: "Sample Mutual", at: "2026-10-01T15:00:00Z" },
         { action: "status", summary: "Status set to Records requested", actor: username, at: "2026-10-01T15:20:00Z" },
         { action: "documents", summary: "10 documents received from the insured", actor: "Ray Duarte", at: "2026-10-05T18:42:00Z" },
-        { action: "first_pass", summary: "Penny's first pass: 8 payroll lines, 2 officers, 2 subcontractors; 2 lines flagged, 4 findings", actor: penny, at: "2026-10-05T18:51:00Z" },
+        { action: "first_pass", summary: "Penny's first pass: 8 payroll lines, 2 officers, 3 subcontractors; 2 lines flagged, 5 findings", actor: penny, at: "2026-10-05T18:51:00Z" },
         { action: "status", summary: "Status set to In review", actor: username, at: "2026-10-06T16:05:00Z" },
       ],
     },
@@ -256,11 +277,14 @@ export function sampleCases(username: string): SeedCase[] {
           line("L2", "Office (Q3-Q1)", "From the register", "8810", "29700.00", "D1", 2),
         ],
         officers: [{ id: "O1", name: "Nadia Pike", title: "President", classCode: "5190", payroll: "64000.00", status: "excluded", source: { doc: "D3", page: 1, note: "Officer rejection on file" } }],
-        subs: [],
+        subs: [
+          { id: "S1", name: "Bright Line Low Voltage", work: "Data and alarm cabling", classCode: "5190", paid: "18500.00", cois: [{ doc: "D4", from: "2025-08-01", to: "2026-08-01" }], treatment: "insured", source: { doc: "D1", page: 6 } },
+        ],
         documents: [
           doc("D1", "Payroll register, Aug 2025 to Apr 2026", "Payroll register", "8/2025-4/2026", 6),
           doc("D2", "Form 941s, Q3 2025 to Q1 2026", "Form 941", "Q3 2025-Q1 2026", 9),
           doc("D3", "Officer rejection of coverage: Nadia Pike", "Officer form", "Policy term", 1),
+          doc("D4", "Certificate of insurance: Bright Line Low Voltage", "Certificate", "8/1/2025-8/1/2026", 1),
         ],
         findings: [
           {
