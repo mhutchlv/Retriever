@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&amp;family=IBM+Plex+Mono:wght@500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="penny.css">
-<link rel="stylesheet" href="workspace.css?v=20261008b">
+<link rel="stylesheet" href="workspace.css?v=20261008c">
 </head>
 <body class="wsapp">
 <header class="wstop">
@@ -28,6 +28,16 @@
 <h2 class="railh">My work</h2>
 <dl class="counts" id="counts"></dl>
 <h3 class="railh2">Cases</h3>
+<div class="casetools">
+<label class="sr" for="casesearch">Search cases</label>
+<input id="casesearch" type="search" placeholder="Search cases" autocomplete="off">
+<label class="castsort" for="casesort">Sort by
+<select id="casesort">
+<option value="due" selected>Next due</option>
+<option value="alpha">Alphabetical</option>
+<option value="recent">Recently opened</option>
+</select></label>
+</div>
 <ul class="caselist" id="caselist"></ul>
 <p class="railfoot"><button class="linkbtn" id="resetbtn" type="button">Reset sample data</button><br><a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a></p>
 </aside>
@@ -54,6 +64,6 @@
 </div>
 <button class="fab" id="fab" type="button">Ask Penny</button>
 <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
-<script src="workspace.js?v=20261008b"></script>
+<script src="workspace.js?v=20261008c"></script>
 </body>
 </html>

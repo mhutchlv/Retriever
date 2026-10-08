@@ -112,7 +112,36 @@
       '<div><dt>In review</dt><dd>' + review + '</dd></div>' +
       '<div><dt>Waiting on insured</dt><dd>' + waiting + '</dd></div>' +
       '<div><dt>Open flags</dt><dd>' + flags + '</dd></div>';
-    $("caselist").innerHTML = S.cases.map(function (c) {
+    renderCaseList();
+  }
+
+  // Per-viewer memory of when each case was last opened, for "Recently opened".
+  function recentMap() {
+    try { return JSON.parse(localStorage.getItem("penny.recent") || "{}") || {}; } catch (e) { return {}; }
+  }
+  function markOpened(id) {
+    try { var m = recentMap(); m[id] = Date.now(); localStorage.setItem("penny.recent", JSON.stringify(m)); } catch (e) { /* storage off: sorting falls back */ }
+  }
+
+  function visibleCases() {
+    var q = ($("casesearch").value || "").trim().toLowerCase();
+    var list = S.cases.filter(function (c) {
+      if (!q) return true;
+      return [c.insured, c.state, c.status, c.id, c.policyNumber || ""].join(" ").toLowerCase().indexOf(q) >= 0;
+    });
+    var how = $("casesort").value, recent = how === "recent" ? recentMap() : null;
+    var byDue = function (a, b) { return String(a.dueDate).localeCompare(String(b.dueDate)) || a.insured.localeCompare(b.insured); };
+    return list.sort(function (a, b) {
+      if (how === "alpha") return a.insured.localeCompare(b.insured);
+      if (how === "recent") return (recent[b.id] || 0) - (recent[a.id] || 0) || byDue(a, b);
+      return byDue(a, b);
+    });
+  }
+
+  function renderCaseList() {
+    var list = visibleCases();
+    if (!list.length) { $("caselist").innerHTML = '<li class="small muted">No cases match.</li>'; return; }
+    $("caselist").innerHTML = list.map(function (c) {
       return '<li><button type="button" data-act="pick" data-id="' + esc(c.id) + '"' + (c.id === S.caseId ? ' aria-current="true"' : "") + ">" +
         '<span class="nm">' + esc(c.insured) + "</span>" +
         '<span class="meta">' + esc(c.state) + " " + statusPill(c.status) + "</span>" +
@@ -133,29 +162,21 @@
     var idx = MAIN.indexOf(c.status), side = SIDE.indexOf(c.status) >= 0;
     var next = idx >= 0 && idx < MAIN.length - 1 ? MAIN[idx + 1] : null;
 
-    var stepper = '<ol class="stepper" aria-label="Audit status">' + MAIN.map(function (s, i) {
+    var stepper = '<div class="stagebar"><span class="stagelabel">Stage</span><ol class="stepper" aria-label="Audit stage">' + MAIN.map(function (s, i) {
       var cls = i === idx ? "cur" : (idx >= 0 && i < idx ? "done" : "");
-      return '<li class="' + cls + '"' + (i === idx ? ' aria-current="step"' : "") + ">" + esc(s) + "</li>";
-    }).join("") + "</ol>";
-
-    var opts = MAIN.concat(SIDE).map(function (s) {
-      return '<option value="' + esc(s) + '"' + (s === c.status ? " selected" : "") + ">" + esc(s) + "</option>";
-    }).join("");
+      return '<li class="' + cls + '"' + (i === idx ? ' aria-current="step"' : "") + ' title="' + esc(s) + '">' + esc(s) + "</li>";
+    }).join("") + "</ol>" +
+      (side ? statusPill(c.status) : "") +
+      (next && !side ? '<button class="iconbtn xs" type="button" data-act="next" data-status="' + esc(next) + '">Move to ' + esc(next) + "</button>" : "") + "</div>";
 
     var head =
-      '<section class="chead" aria-label="Case"><div class="statusrow"><h1>' + esc(c.insured) + "</h1>" +
-      (side ? statusPill(c.status) : "") + "</div>" +
+      '<section class="chead" aria-label="Case"><div class="statusrow"><h1>' + esc(c.insured) + "</h1></div>" +
       '<div class="facts2">' +
       f("Policy", c.policyNumber) + f("Carrier", c.carrier) + f("State", c.state) +
       f("Period", fmtDate(c.policyEffectiveDate) + " to " + fmtDate(c.policyExpirationDate)) +
       f("Audit type", c.auditType) + f("Contact", c.contact && typeof c.contact === "object" ? kv(c.contact) : c.contact) +
       f("Assignee", c.assignee) + f("Due", fmtDate(c.dueDate)) + "</div>" +
-      stepper +
-      '<div class="statusrow">' +
-      (next ? '<button class="btn sm" type="button" data-act="next" data-status="' + esc(next) + '">Next step: ' + esc(next) + "</button>" : "") +
-      '<label class="sr" for="st-sel">Set status</label><select id="st-sel">' + opts + "</select>" +
-      '<label class="sr" for="st-reason">Reason (optional)</label><input id="st-reason" type="text" placeholder="Reason (optional)" maxlength="300">' +
-      '<button class="btn ghost sm" type="button" data-act="setstatus">Set status</button></div></section>';
+      stepper + "</section>";
 
     var est = t.estimate || {}, cmp = est.comparison || null;
     var strip = '<div class="strip">' +
@@ -502,6 +523,7 @@
   }
 
   function loadCase(id) {
+    markOpened(id);
     S.caseId = id; S.sel = {}; S.editLine = null; S.editOps = false; S.open = {}; S.data = null;
     center.innerHTML = '<p class="muted pad">Loading…</p>';
     renderRail(); renderChat(); location.hash = "case=" + encodeURIComponent(id);
@@ -538,15 +560,10 @@
   });
 
   var handlers = {
-    pick: function (b, id) { closeRail(); loadCase(id); },
+    pick: function (b, id) { if (window.innerWidth < 1100) closeRail(); loadCase(id); },
     tab: function (b) { S.tab = b.getAttribute("data-tab"); renderCenter(false); var t = center.querySelector('[data-tab="' + S.tab + '"]'); if (t) t.focus(); },
     ref: function (b) { goRef(b.getAttribute("data-ref")); },
     next: function (b) { act({ type: "set_status", status: b.getAttribute("data-status") }); },
-    setstatus: function () {
-      var s = $("st-sel").value, r = $("st-reason").value.trim(), a = { type: "set_status", status: s };
-      if (r) a.reason = r;
-      act(a);
-    },
     toggleclass: function (b) { var k = b.getAttribute("data-cls"); S.open = S.open || {}; S.open[k] = !S.open[k]; renderCenter(true); },
     openall: function (b) {
       var open = b.getAttribute("data-to") === "open", c = C();
@@ -716,10 +733,16 @@
   });
 
   /* ---------- chrome ---------- */
-  function closeRail() { $("rail").classList.remove("open"); $("railbtn").setAttribute("aria-expanded", "false"); }
-  $("railbtn").addEventListener("click", function () {
-    var o = $("rail").classList.toggle("open"); $("railbtn").setAttribute("aria-expanded", String(o));
-  });
+  function setRail(open) {
+    $("rail").classList.toggle("open", open);
+    document.body.classList.toggle("rail-open", open);
+    $("railbtn").setAttribute("aria-expanded", String(open));
+    if (open) { var s = $("casesearch"); if (s) s.focus(); }
+  }
+  function closeRail() { setRail(false); }
+  $("railbtn").addEventListener("click", function () { setRail(!$("rail").classList.contains("open")); });
+  $("casesearch").addEventListener("input", renderCaseList);
+  $("casesort").addEventListener("change", renderCaseList);
   $("fab").addEventListener("click", function () { $("penny").classList.add("open"); $("chatin").focus(); });
   $("sheetclose").addEventListener("click", function () { $("penny").classList.remove("open"); $("fab").focus(); });
   document.addEventListener("keydown", function (e) {
@@ -743,7 +766,7 @@
     renderRail();
     if (!S.cases.length) { center.innerHTML = '<p class="muted pad">No cases yet.</p>'; return; }
     var m = /case=([^&]+)/.exec(location.hash), want = m ? decodeURIComponent(m[1]) : null;
-    var pick = S.cases.filter(function (c) { return c.id === want; })[0] || S.cases[0];
+    var pick = S.cases.filter(function (c) { return c.id === want; })[0] || visibleCases()[0];
     return loadCase(pick.id);
   }).catch(function (e) { center.innerHTML = '<div class="callout bad pad">' + esc(e.message) + "</div>"; });
 })();

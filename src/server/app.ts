@@ -221,6 +221,7 @@ export function createApp({
     return {
       id: c.id,
       insured: c.insured,
+      policyNumber: c.policyNumber,
       state: c.state,
       period: `${c.policyEffectiveDate} to ${c.policyExpirationDate}`,
       status: c.status,

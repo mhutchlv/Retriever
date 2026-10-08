@@ -22,8 +22,12 @@ body.wsapp{height:100vh;display:flex;flex-direction:column;overflow:hidden}
 .iconbtn{border:1px solid #CFCAC1;background:#fff;color:var(--ink);font:inherit;font-size:14px;border-radius:var(--r-s);padding:8px 12px;min-height:36px;cursor:pointer}
 .iconbtn:hover{border-color:var(--cu)}
 .linkbtn{background:none;border:none;color:var(--cu);font:inherit;font-size:14px;text-decoration:underline;cursor:pointer;padding:4px 0}
-.railtoggle,.sheetclose,.fab{display:none}
-.wsgrid{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:260px minmax(0,1fr) 380px}
+.sheetclose,.fab{display:none}
+.railtoggle{display:inline-block}
+.wsgrid{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 380px}
+/* the case menu is collapsed until opened */
+.rail:not(.open){display:none}
+body.rail-open .wsgrid{grid-template-columns:280px minmax(0,1fr) 380px}
 .rail,.center,.penny{overflow-y:auto;min-height:0}
 .rail{background:#fff;border-right:1px solid var(--line);padding:16px}
 .railh{font-size:18px}
@@ -57,8 +61,11 @@ body.wsapp{height:100vh;display:flex;flex-direction:column;overflow:hidden}
 .chead h1{font-size:28px;letter-spacing:-.8px;line-height:1.1}
 .facts2{display:flex;flex-wrap:wrap;gap:6px 22px;font-size:14px;color:var(--body)}
 .facts2 span b{color:var(--muted);font-weight:500;margin-right:4px}
-.stepper{list-style:none;margin:0;padding:0 0 4px;display:flex;gap:4px;overflow-x:auto}
-.stepper li{flex:1 0 auto;font-size:12px;padding:6px 10px;border-radius:999px;background:var(--line-soft);color:var(--muted);white-space:nowrap;text-align:center}
+.stagebar{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.stagelabel{font-size:12px;color:var(--muted)}
+.stepper{list-style:none;margin:0;padding:0;display:flex;gap:2px;overflow-x:auto;flex:0 1 auto;min-width:0}
+.stepper li{flex:0 0 auto;font-size:11px;line-height:1.2;padding:3px 8px;border-radius:999px;background:var(--line-soft);color:var(--muted);white-space:nowrap;text-align:center}
+.iconbtn.xs{font-size:12.5px;padding:4px 10px;min-height:28px}
 .stepper li.done{background:#E6F0EB;color:var(--green)}
 .stepper li.cur{background:var(--cu);color:#fff;font-weight:600}
 .statusrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
@@ -150,14 +157,14 @@ table.ws .btn.sm,table.ws .iconbtn{white-space:nowrap}
 
 /* tablet: rail behind a button */
 @media (max-width:1099px){
-  .wsgrid{grid-template-columns:minmax(0,1fr) 360px}
-  .railtoggle{display:inline-block}
+  .wsgrid,body.rail-open .wsgrid{grid-template-columns:minmax(0,1fr) 360px}
+  .rail:not(.open){display:block}
   .rail{position:fixed;left:0;top:0;bottom:0;width:280px;max-width:86vw;z-index:60;transform:translateX(-102%);transition:transform .25s var(--ease);box-shadow:8px 0 30px rgba(0,0,0,.15)}
   .rail.open{transform:none}
 }
 /* phone: single column, Penny as bottom sheet */
 @media (max-width:719px){
-  .wsgrid{grid-template-columns:minmax(0,1fr)}
+  .wsgrid,body.rail-open .wsgrid{grid-template-columns:minmax(0,1fr)}
   .wstop{padding:8px 16px}
   .wstop .pill,.wstop .who{display:none}
   .center{padding:14px 16px 90px}
@@ -223,3 +230,9 @@ table.ws .btn.sm,table.ws .iconbtn{white-space:nowrap}
 .noterow td{border-top:none;padding-top:0;font-size:12.5px;color:var(--muted)}
 .subtable td:first-child{min-width:120px}
 .subtable td:nth-child(4){font-size:12.5px}
+
+/* case search and sort */
+.casetools{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+.casetools input,.casetools select{border:1px solid #CFCAC1;border-radius:var(--r-s);padding:7px 10px;font:inherit;font-size:14px;min-height:36px;background:#fff;color:var(--ink);width:100%}
+.castsort{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);white-space:nowrap}
+.castsort select{flex:1}
