@@ -2,6 +2,7 @@ import { runTool, type RunRecord } from "../engine/engine.ts";
 import type { Jurisdiction } from "../engine/rules/jurisdictions.ts";
 import { jurisdictions2026 } from "../engine/rules/jurisdictions.ts";
 import type { ToolName } from "../engine/tools/types.ts";
+import { salesIntent, type SalesReply } from "./sales.ts";
 
 // Keyword router used when no model is configured. It runs a tool directly when
 // the message carries enough to do so (a class code, a search term), and
@@ -12,6 +13,12 @@ export interface ChatReply {
   runs: RunRecord[];
   /** A tool form the UI should open, optionally prefilled. */
   openTool?: { tool: ToolName; prefill?: Record<string, unknown> };
+  /** A feature demo the UI should play. */
+  demo?: SalesReply["demo"];
+  /** Start the in-chat early-access sign-up. */
+  signup?: SalesReply["signup"];
+  /** Follow-up prompts to offer as chips. */
+  suggestions?: string[];
   mode: "rules" | "model";
 }
 
@@ -49,22 +56,14 @@ export function routeMessage(message: string, tenant: string): ChatReply {
     };
   }
 
+  const sales = salesIntent(lower);
+  if (sales) return { ...sales, runs: [], mode: "rules" };
+
   if (/officer|owner|partner|sole prop|llc member/.test(lower)) {
     return {
       reply: "Officer and owner payroll counts differently on an audit. Enter each person and Penny will show what counts and why.",
       runs: [],
       openTool: { tool: "officer_payroll", prefill: states[0] ? { state: states[0] } : {} },
-      mode: "rules",
-    };
-  }
-
-  if (/dispute|disagree|wrong|mistake|error|too high|unfair|appeal/.test(lower)) {
-    return {
-      reply:
-        "Penny can give your audit a neutral first review. Start by re-running the math: enter the payroll and rates from your audit " +
-        "and Penny will show each step. If something does not match, you will see exactly which line. You keep every appeal right your state provides.",
-      runs: [],
-      openTool: { tool: "audit_bill_estimator", prefill: states[0] ? { state: states[0] } : {} },
       mode: "rules",
     };
   }
@@ -97,11 +96,20 @@ export function routeMessage(message: string, tenant: string): ChatReply {
     return { reply: `Class codes matching "${query}":`, runs: [run], mode: "rules" };
   }
 
+  // A bare job description ("roofer", "office staff") is usually a class code question.
+  if (words.length && words.length <= 3) {
+    const run = runTool("class_code_lookup", { query: words.join(" "), states }, { tenant });
+    if ((run.output as { matches: unknown[] }).matches.length) {
+      return { reply: `Class codes matching "${words.join(" ")}":`, runs: [run], mode: "rules" };
+    }
+  }
+
   return {
     reply:
       "I can look up and compare class codes, estimate an audit bill, work out officer payroll, or build your document checklist. " +
-      "Try \"class code for janitorial in CA\", \"8810 in NV and CA\", or \"what records do I need for my audit?\"",
+      "I can also walk you through plans and pricing, run a demo, or get you signed up for early access.",
     runs: [],
+    suggestions: ["Look up a class code", "Plans and pricing", "Watch a demo"],
     mode: "rules",
   };
 }

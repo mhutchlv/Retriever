@@ -48,6 +48,7 @@ export const classCodes2026: RuleSet<ClassCodeData> = {
         c("7228", "Trucking: local hauling only, all employees & drivers", ["trucking", "hauling", "local delivery"]),
         c("7380", "Drivers, chauffeurs, messengers and their helpers NOC, commercial", ["driver", "delivery", "courier"]),
         c("8017", "Store: retail NOC", ["retail", "store", "shop"]),
+        c("8018", "Store: wholesale NOC", ["wholesale", "warehouse", "distribution"]),
         c("8380", "Automobile service or repair center & drivers", ["auto repair", "mechanic", "garage"]),
         c("8601", "Architect or engineer, consulting", ["architect", "engineer", "consulting"]),
         c("8742", "Salespersons or collectors, outside", ["outside sales", "sales", "salesperson"]),

@@ -7,6 +7,7 @@ import { routeMessage, type ChatReply } from "../chat/router.ts";
 import { isToolName, replayRun, runTool, TOOLS, type RunRecord } from "../engine/engine.ts";
 import { InputError } from "../engine/money.ts";
 import { ENGINE_VERSION } from "../engine/version.ts";
+import type { LeadSink } from "../leads/store.ts";
 import type { RunLog } from "../runlog/store.ts";
 
 const PUBLIC_DIR = resolve(fileURLToPath(new URL("../../public/", import.meta.url)));
@@ -27,10 +28,11 @@ const MIME: Record<string, string> = {
 
 const SECURITY_HEADERS: Record<string, string> = {
   "Content-Security-Policy":
-    "default-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
   "X-Content-Type-Options": "nosniff",
   "Referrer-Policy": "strict-origin-when-cross-origin",
   "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+  "Strict-Transport-Security": "max-age=31536000",
 };
 
 class HttpError extends Error {
@@ -89,7 +91,18 @@ async function readJson(req: IncomingMessage): Promise<unknown> {
   }
 }
 
-function clientKey(req: IncomingMessage): string {
+/**
+ * The caller's address for rate limiting. Behind a reverse proxy (Azure Container
+ * Apps ingress) every socket comes from the proxy, so with trustProxy the address
+ * is the last X-Forwarded-For entry: the one the proxy itself appended. Earlier
+ * entries are client-supplied and can be forged.
+ */
+export function clientKey(req: IncomingMessage, trustProxy: boolean): string {
+  if (trustProxy) {
+    const header = req.headers["x-forwarded-for"];
+    const last = (Array.isArray(header) ? header.join(",") : header ?? "").split(",").map((s) => s.trim()).filter(Boolean).at(-1);
+    if (last) return last;
+  }
   return req.socket.remoteAddress ?? "unknown";
 }
 
@@ -112,13 +125,17 @@ function parseHistory(body: unknown): ChatTurn[] {
 
 export interface AppOptions {
   runLog: RunLog;
+  leads: LeadSink;
   /** Use the model for chat when credentials are present. Tests turn this off. */
   useModel?: boolean;
+  /** Read the client address from X-Forwarded-For (set when running behind Azure ingress). */
+  trustProxy?: boolean;
 }
 
-export function createApp({ runLog, useModel = modelConfigured() }: AppOptions): Server {
+export function createApp({ runLog, leads, useModel = modelConfigured(), trustProxy = false }: AppOptions): Server {
   const toolLimiter = new RateLimiter(60, 60_000);
   const chatLimiter = new RateLimiter(20, 60_000);
+  const leadLimiter = new RateLimiter(5, 60_000);
 
   const record = (run: RunRecord) => {
     runLog.append(run);
@@ -140,7 +157,7 @@ export function createApp({ runLog, useModel = modelConfigured() }: AppOptions):
 
     const toolMatch = path.match(/^\/api\/tools\/([a-z_]+)$/);
     if (method === "POST" && toolMatch) {
-      if (!toolLimiter.allow(clientKey(req))) throw new HttpError(429, "Too many requests. Try again in a minute.");
+      if (!toolLimiter.allow(clientKey(req, trustProxy))) throw new HttpError(429, "Too many requests. Try again in a minute.");
       const name = toolMatch[1]!;
       if (!isToolName(name)) throw new HttpError(404, `No tool named ${name}.`);
       const run = record(runTool(name, await readJson(req), { tenant: TENANT }));
@@ -148,7 +165,7 @@ export function createApp({ runLog, useModel = modelConfigured() }: AppOptions):
     }
 
     if (method === "POST" && path === "/api/chat") {
-      if (!chatLimiter.allow(clientKey(req))) throw new HttpError(429, "Too many messages. Try again in a minute.");
+      if (!chatLimiter.allow(clientKey(req, trustProxy))) throw new HttpError(429, "Too many messages. Try again in a minute.");
       const history = parseHistory(await readJson(req));
       let reply: ChatReply;
       if (useModel) {
@@ -162,11 +179,25 @@ export function createApp({ runLog, useModel = modelConfigured() }: AppOptions):
         reply = routeMessage(history.at(-1)!.content, TENANT);
       }
       reply.runs.forEach(record);
-      return send(res, 200, { reply: reply.reply, mode: reply.mode, openTool: reply.openTool, receipts: reply.runs });
+      return send(res, 200, {
+        reply: reply.reply,
+        mode: reply.mode,
+        openTool: reply.openTool,
+        demo: reply.demo,
+        signup: reply.signup,
+        suggestions: reply.suggestions,
+        receipts: reply.runs,
+      });
+    }
+
+    if (method === "POST" && path === "/api/leads") {
+      if (!leadLimiter.allow(clientKey(req, trustProxy))) throw new HttpError(429, "Too many sign-ups from here. Try again in a minute.");
+      const lead = leads.add(await readJson(req));
+      return send(res, 200, { ok: true, leadId: lead.leadId });
     }
 
     if (method === "POST" && path === "/api/replay") {
-      if (!toolLimiter.allow(clientKey(req))) throw new HttpError(429, "Too many requests. Try again in a minute.");
+      if (!toolLimiter.allow(clientKey(req, trustProxy))) throw new HttpError(429, "Too many requests. Try again in a minute.");
       const receipt = (await readJson(req) as { receipt?: RunRecord }).receipt;
       if (!receipt || typeof receipt.runId !== "string") throw new HttpError(400, "Send the receipt from a previous result.");
       const stored = runLog.get(receipt.runId);

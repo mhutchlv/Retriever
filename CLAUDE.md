@@ -16,6 +16,12 @@ Chat-first workers' comp premium audit helper. See README.md and docs/ARCHITECTU
 - Data not checked against the governing bureau is `status: "sample"` and must stay visibly labeled.
 - No NCCI manual text beyond short class code titles until the NCCI license is signed.
 
+## Chat and site
+
+- `src/chat/knowledge.ts` `FACTS` is what the homepage salesperson may say about plans, prices and availability. Keep it in step with `public/index.html` and `src/chat/sales.ts`.
+- Demos may use sample businesses and demo rates, but every dollar figure must come from an engine run.
+- Never collect contact details through the model; sign-ups go through the consent form to `/api/leads`.
+
 ## Copy rules
 
 - Promise accuracy and explanation, never lower premiums. Penny is a "neutral first review," never an "arbiter."

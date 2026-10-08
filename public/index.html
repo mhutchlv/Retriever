@@ -1,87 +1,246 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Penny by Propono</title>
-  <meta name="description" content="Penny checks workers' comp class codes, estimates your audit bill and gets you ready for the auditor. Every answer shows its work.">
-  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;1,700&display=swap">
-  <link rel="stylesheet" href="/styles.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Penny: your audit, accurate to the penny</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&amp;family=IBM+Plex+Mono:wght@500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="penny.css">
+<style>
+.hero{background:#fff;border-bottom:1px solid var(--line);padding:56px 0 72px}
+.hero .wrap{display:flex;flex-direction:column;align-items:center;gap:30px}
+.hero .copy{display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;max-width:780px}
+.hero h1{font-size:clamp(42px,6.4vw,68px)}
+.hero .lede{text-align:center}
+.chat{width:100%;max-width:880px;background:#fff;border:1px solid #D9D5CD;border-radius:20px;box-shadow:0 18px 50px rgba(21,25,31,.09);overflow:hidden}
+.chat .top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 20px;border-bottom:1px solid var(--line-soft);flex-wrap:wrap}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--cu);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:16px;flex:0 0 auto}
+.chat .log{height:430px;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:14px;background:var(--paper-2);scroll-behavior:smooth}
+.msg{display:flex;gap:10px;align-items:flex-start;max-width:88%;animation:pop .35s var(--ease)}
+.msg .avatar{width:28px;height:28px;font-size:14px}
+.msg .b{background:#fff;border:1px solid var(--line);border-radius:4px 14px 14px 14px;padding:12px 16px;font-size:15px;line-height:1.55;white-space:pre-line}
+.msg.user{align-self:flex-end;max-width:80%}
+.msg.user .b{background:var(--ink);color:#fff;border-color:var(--ink);border-radius:14px 4px 14px 14px}
+.typing{display:flex;gap:10px;align-items:center}
+.typing .dots{background:#fff;border:1px solid var(--line);border-radius:4px 14px 14px 14px;padding:12px 16px;display:flex;gap:5px}
+.typing .dots i{width:7px;height:7px;border-radius:50%;background:#B9B4AA;animation:blink 1.1s infinite}
+.typing .dots i:nth-child(2){animation-delay:.18s}.typing .dots i:nth-child(3){animation-delay:.36s}
+@keyframes blink{0%,80%,100%{opacity:.3;transform:translateY(0)}40%{opacity:1;transform:translateY(-3px)}}
+@keyframes pop{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.chat .foot{padding:14px 20px 18px;border-top:1px solid var(--line-soft);display:flex;flex-direction:column;gap:12px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid #D9D5CD;background:#fff;color:var(--ink);font:inherit;font-size:14px;padding:10px 14px;border-radius:999px;cursor:pointer;min-height:44px;transition:border-color .2s,background .2s}
+.chip:hover{border-color:var(--cu);background:var(--cu-tint)}
+.inrow{display:flex;gap:10px;align-items:center}
+.inrow input{flex:1 1 auto;min-width:0;border:1px solid #CFCAC1;border-radius:var(--r-s);padding:14px 16px;font:inherit;font-size:15px;color:var(--ink);background:#fff;min-height:48px}
+.send{flex:0 0 auto;background:var(--cu);color:#fff;border:none;border-radius:var(--r-s);min-width:48px;min-height:48px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.send:hover{background:var(--cu-dark)}
+.band .wrap{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:24px}
+.band{padding:48px 0}
+.steps-note{font-size:14px;color:var(--muted);margin-top:16px}
+.research-strip{background:var(--cu-tint);border-top:1px solid var(--cu-light);border-bottom:1px solid var(--cu-light);padding:40px 0}
+.research-strip .wrap{display:flex;flex-wrap:wrap;gap:24px;align-items:center;justify-content:space-between}
+.research-strip .q{font-family:'Bricolage Grotesque',sans-serif;font-size:clamp(22px,2.8vw,30px);line-height:1.2;max-width:30ch;letter-spacing:-0.5px}
+.pricegrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px}
+.plan{border:1px solid var(--line);border-radius:var(--r);padding:26px;display:flex;flex-direction:column;gap:12px;background:#fff}
+.plan.hi{border:2px solid var(--cu)}
+.plan .amt{font-family:'IBM Plex Mono',monospace;font-size:32px}
+.plan .amt small{font-size:15px;color:var(--muted)}
+.plan p{font-size:14.5px;color:var(--body)}
+.plan .btn{margin-top:auto;justify-content:center}
+.partners .wrap{display:flex;flex-wrap:wrap;gap:32px;align-items:center;justify-content:space-between}
+.partnerlist{flex:1 1 360px;display:flex;flex-direction:column;gap:0}
+.partnerlist div{display:flex;justify-content:space-between;gap:12px;padding:16px 0;border-bottom:1px solid var(--line)}
+</style>
 </head>
 <body>
-  <header class="site-header">
-    <a class="brand" href="/" aria-label="Penny by Propono, home">
-      <span class="brand-mark">Penny</span>
-      <span class="brand-by">by Propono</span>
-    </a>
-    <nav class="site-nav" aria-label="Main">
-      <a href="#tools">Free tools</a>
-      <a href="#how">How Penny works</a>
-    </nav>
-  </header>
+<header class="site">
+<div class="wrap">
+<a class="brand" href="index.html">
+<svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="15" fill="none" stroke="#A9481F" stroke-width="2.5"/><circle cx="17" cy="17" r="10" fill="none" stroke="#A9481F" stroke-width="1.2"/><path d="M14 23V11h4.2a3.4 3.4 0 0 1 0 6.8H14" fill="none" stroke="#A9481F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<b>Penny</b><small>by Propono</small>
+</a>
+<nav class="main" aria-label="Main">
+<a href="#tools">Free tools</a>
+<a href="#review">Audit Review</a>
+<a href="insurers.html">For insurers</a>
+<a href="research.html">Research</a>
+<a href="#security">Security</a>
+<a href="#pricing">Pricing</a>
+<a href="#partners">Partners</a>
+</nav>
+<a class="btn" href="#tools">Ask Penny</a>
+</div>
+</header>
 
-  <main>
-    <section class="hero" aria-labelledby="hero-title">
-      <p class="eyebrow">Workers' comp audit helper</p>
-      <h1 id="hero-title">Your audit, accurate to the penny.</h1>
-      <p class="lede">Check class codes, estimate your audit bill and get your records ready. Every answer shows the rule and the math behind it.</p>
-    </section>
+<main>
+<section class="hero" id="top">
+<div class="wrap">
+<div class="copy">
+<span class="kicker">Workers' comp premium audit, explained</span>
+<h1>Your audit, accurate to the penny.</h1>
+<p class="lede">Penny is a friendly audit helper that shows its work. Ask a question, check a class code, or see what your audit bill should be. Free, no login.</p>
+</div>
 
-    <section class="chat" aria-label="Ask Penny">
-      <div id="messages" class="messages" aria-live="polite"></div>
-      <div class="suggestions" id="suggestions">
-        <button type="button" class="chip" data-ask="Class code for janitorial in CA">Class code for janitorial in CA</button>
-        <button type="button" class="chip" data-ask="Compare 8810 in NV and California">Compare 8810 in NV and California</button>
-        <button type="button" class="chip" data-ask="How much will my audit bill be?">Estimate my audit bill</button>
-        <button type="button" class="chip" data-ask="What records do I need for my audit?">What records do I need?</button>
-      </div>
-      <form id="chat-form" class="chat-form">
-        <label for="chat-input" class="visually-hidden">Ask Penny</label>
-        <input id="chat-input" name="message" autocomplete="off" maxlength="4000" placeholder="Ask about class codes, your audit bill, officer payroll or records">
-        <button type="submit" class="btn btn-primary">Ask</button>
-      </form>
-      <p class="fine">Penny gives a neutral first review. Your carrier and auditor make the final decision, and you keep every appeal right your state provides.</p>
-    </section>
+<div class="chat" id="tools">
+<div class="top">
+<div style="display:flex;align-items:center;gap:10px">
+<span class="avatar">P</span>
+<div style="display:flex;flex-direction:column">
+<span style="font-weight:600;font-size:15px">Penny</span>
+<span class="small muted">Free tools · no login needed</span>
+</div>
+</div>
+<button type="button" class="chip" id="reset" style="min-height:40px;padding:8px 14px;font-size:13px">Start over</button>
+</div>
+<div class="log" id="chat" aria-live="polite"></div>
+<div class="foot">
+<div class="chips" id="chips"></div>
+<div class="inrow">
+<label for="penny-input" class="sr">Ask Penny a question</label>
+<input id="penny-input" type="text" placeholder="Ask Penny about your audit" autocomplete="off">
+<button type="button" class="send" id="send" aria-label="Send"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h13"/><path d="M13 6l6 6-6 6"/></svg></button>
+</div>
+<span class="small muted">Answers come from Penny's audit engine and show the rule versions used. Results marked sample data use placeholder tables until bureau data is loaded. Penny gives a neutral first review, not a final audit.</span>
+</div>
+</div>
+</div>
+</section>
 
-    <section id="tools" class="tools" aria-labelledby="tools-title">
-      <p class="eyebrow">Free, no sign-in</p>
-      <h2 id="tools-title">Pick a tool</h2>
-      <div class="tool-grid" id="tool-grid"></div>
-      <div id="tool-panel" class="tool-panel" hidden></div>
-    </section>
+<section class="dark band">
+<div class="wrap">
+<div style="display:flex;flex-direction:column;gap:8px;max-width:700px">
+<h2>Got a bigger audit bill than expected?</h2>
+<p style="font-size:17px">Penny checks it line by line: class codes, payroll, officers and subcontractors. You see every decision, the rule behind it, and what would change the result.</p>
+</div>
+<a class="btn" href="#review">Check my audit</a>
+</div>
+</section>
 
-    <section id="how" class="how" aria-labelledby="how-title">
-      <p class="eyebrow">One engine, one answer</p>
-      <h2 id="how-title">The same inputs always give the same result</h2>
-      <div class="how-grid">
-        <article>
-          <h3>Locked versions</h3>
-          <p>Every result records its inputs, the rule version in force on your policy date and the engine version. Press Verify on any result to re-run it and confirm it matches.</p>
-        </article>
-        <article>
-          <h3>Results change only with evidence</h3>
-          <p>A different answer needs different facts. Penny shows which figures drive your bill, so you know what is worth documenting.</p>
-        </article>
-        <article>
-          <h3>Your entries are not kept</h3>
-          <p>For the free tools, Penny stores only a fingerprint of each run, never what you typed. Save the receipt if you want to verify a result later.</p>
-        </article>
-      </div>
-    </section>
-  </main>
+<section>
+<div class="wrap">
+<div class="head">
+<span class="kicker">How Penny works</span>
+<h2>Penny shows its work. Every time, for everyone.</h2>
+<p class="lede">Penny uses the same audit engine insurers use. The same documents and rules give the same answer whether a business, an auditor or a carrier is asking.</p>
+</div>
+<div class="facts">
+<div class="fact"><h3>The evidence decides</h3><p>Results depend on your payroll records and the rules for your state, never on who is asking or how hard they push.</p></div>
+<div class="fact"><h3>Every decision cites its basis</h3><p>Each class code and payroll figure links to the rule and the document behind it. Nothing is a black box.</p></div>
+<div class="fact"><h3>Accuracy, not higher or lower bills</h3><p>Penny aims to get the audit right. Sometimes that means money back; sometimes it confirms the bill.</p></div>
+<div class="fact"><h3>A person makes the final call</h3><p>Penny is a neutral first review. The carrier's auditor decides, and you keep every appeal right your state provides.</p></div>
+</div>
+</div>
+</section>
 
-  <footer class="site-footer">
-    <p>Penny is an information tool, not legal or insurance advice. Results are estimates; your carrier's audit governs your bill.</p>
-    <p>© 2026 Propono Systems Inc.</p>
-  </footer>
+<section class="white" id="who">
+<div class="wrap">
+<div class="head">
+<span class="kicker">Who Penny helps</span>
+<h2>One audit engine. Everyone on the same page.</h2>
+</div>
+<div class="grid">
+<div class="card"><span class="kicker">Auditors</span><h3>Do more audits, with less chasing</h3><p>Forward documents and get a drafted worksheet with every class and payroll split cited. Ask Penny about any rule.</p><a class="more" href="#pricing">See Pro and Max plans</a></div>
+<div class="card"><span class="kicker">Businesses</span><h3>Be ready, then check the result</h3><p>Audit Ready gets your file complete before the auditor asks. Audit Review checks the bill afterward.</p><a class="more" href="#review">How Audit Review works</a></div>
+<div class="card"><span class="kicker">Partners</span><h3>Help every client through audit season</h3><p>Agencies, bookkeepers, accountants and payroll providers run Penny for many clients from one dashboard.</p><a class="more" href="#partners">Partner plans</a></div>
+<div class="card tint"><span class="kicker">Insurers</span><h3>Fewer disputes reach your auditors</h3><p>The full Propono audit system: collection, pre-build, a dispute portal for insureds, and automation that earns its way.</p><a class="more" href="insurers.html">See Penny for insurers</a></div>
+</div>
+</div>
+</section>
 
-  <template id="sample-note">
-    <span class="badge badge-warning" title="Built on sample data that has not been checked against the bureau's current filing.">Sample data</span>
-  </template>
+<section id="review">
+<div class="wrap">
+<div class="head">
+<span class="kicker">Audit Review</span>
+<h2>A neutral first review, before anyone argues.</h2>
+<p class="lede">Most audit disputes are misunderstandings. Penny explains, takes in evidence and recalculates. Only what's still unresolved goes to the auditor.</p>
+</div>
+<ol class="flow">
+<li><span class="n">01</span><strong>Open your audit</strong><span>See every line: class, payroll, rate and premium.</span></li>
+<li><span class="n">02</span><strong>Penny explains it</strong><span>Each decision comes with the rule and the document behind it.</span></li>
+<li><span class="n">03</span><strong>Add what's missing</strong><span>Upload a certificate or payroll record and see the new amount.</span></li>
+<li><span class="n">04</span><strong>Escalate if needed</strong><span>The auditor reviews only the disputed items, with your evidence attached.</span></li>
+<li class="key"><span class="n">05</span><strong>Revised automatically</strong><span>Approved changes update the audit and the bill. No starting over.</span></li>
+</ol>
+<p class="steps-note">Your carrier's auditor makes the final decision, and you keep every appeal right your state provides.</p>
+</div>
+</section>
 
-  <script type="module" src="/app.js"></script>
+
+<section class="white" id="security">
+<div class="wrap">
+<div class="head">
+<span class="kicker">Data security</span>
+<h2>Your payroll is sensitive. We treat it that way.</h2>
+<p class="lede">Penny runs on Propono's SOC 2 Type II certified platform. An independent auditor tested how we protect data over months, not on a single day. Here is what that means for you.</p>
+</div>
+<div class="grid">
+<div class="card"><h3>Encrypted end to end</h3><p>In transit and at rest. Social Security numbers in uploaded records are redacted where they are not needed.</p></div>
+<div class="card"><h3>Used only for your audit</h3><p>Your records are never sold or shared with other businesses. The free tools don't keep what you type.</p></div>
+<div class="card"><h3>Walled off by carrier</h3><p>Each insurer's data is isolated. Only learned correction patterns are shared, never payroll, premium or names.</p></div>
+<div class="card"><h3>Logged and reproducible</h3><p>Every result records its inputs and the rule and model versions, so it can be checked by you, an auditor or a regulator.</p></div>
+</div>
+<p style="margin-top:20px;font-size:15px"><a href="security.html"><strong>Read the full data security page</strong></a>, including what SOC 2 covers and how to request the report.</p>
+</div>
+</section>
+
+<div class="research-strip">
+<div class="wrap">
+<div style="display:flex;flex-direction:column;gap:10px;max-width:700px">
+<span class="kicker">Backed by research</span>
+<p class="q">How does an AI system prove which audit decisions it can make on its own?</p>
+<p style="color:var(--body)">Our research proposal to the U.S. National Science Foundation's SBIR program is about exactly that: automation with a dollar-based error guarantee that businesses, auditors and regulators can inspect.</p>
+</div>
+<a class="btn" href="research.html">Read the research plan</a>
+</div>
+</div>
+
+<section class="white" id="pricing">
+<div class="wrap">
+<div class="head">
+<span class="kicker">Pricing</span>
+<h2>Start free. Pay for audits, not seats you don't use.</h2>
+</div>
+<div class="pricegrid">
+<div class="plan"><strong>Free</strong><span class="amt">$0</span><p>All free tools, plus 3 audits a month.</p><a class="btn ghost" href="#tools">Try Penny</a></div>
+<div class="plan hi"><strong>Pro, for auditors</strong><span class="amt">$99<small>/mo</small></span><p>30 audits a month, then $4 each. Email intake and custom output formats.</p><a class="btn" href="#tools">Start Pro</a></div>
+<div class="plan"><strong>Max, for full-time auditors</strong><span class="amt">$399<small>/mo</small></span><p>150 audits a month, then $3 each. Team plans available.</p><a class="btn ghost" href="#tools">Start Max</a></div>
+<div class="plan"><strong>For businesses</strong><span class="amt">from $49</span><p>Audit Ready from $49 per audit. Audit Review from $99 per review.</p><a class="btn ghost" href="#review">Check my audit</a></div>
+</div>
+<p class="small" style="margin-top:16px;color:var(--body)">Insurers and audit firms: the dispute portal, voice and text outreach, and team tools are part of the full Propono audit system. <a href="insurers.html">See Penny for insurers</a>.</p>
+</div>
+</section>
+
+<section class="partners" id="partners">
+<div class="wrap">
+<div style="display:flex;flex-direction:column;gap:12px;flex:1 1 480px">
+<span class="kicker">Partners</span>
+<h2>Your clients' audits, handled.</h2>
+<p class="lede">Insurance agencies, bookkeepers, accountants and payroll providers: offer Penny under your name, manage every client from one dashboard, or connect it to your payroll data.</p>
+</div>
+<div class="partnerlist">
+<div><strong>Partner seats</strong><span class="mono">from $49 / seat</span></div>
+<div><strong>White-label and API</strong><span class="mono">talk to us</span></div>
+<a class="btn ghost" style="align-self:flex-start;margin-top:16px" href="mailto:[CONTACT EMAIL]?subject=Penny%20partners">Become a partner</a>
+</div>
+</div>
+</section>
+</main>
+
+<footer>
+<div class="wrap">
+<div style="display:flex;flex-direction:column;gap:4px;max-width:640px">
+<strong>Penny by Propono</strong>
+<span>Penny gives a neutral first review and does not replace your carrier's audit. Results depend on the documents provided and the rules in effect for your policy period.</span>
+</div>
+<nav aria-label="Footer"><a href="insurers.html">For insurers</a><a href="research.html">Research</a><a href="security.html">Data security</a><span>© 2026 Propono Systems Inc. · SOC 2 Type II certified</span></nav>
+</div>
+</footer>
+
+<script src="penny.js"></script>
+<script src="app.js"></script>
 </body>
 </html>

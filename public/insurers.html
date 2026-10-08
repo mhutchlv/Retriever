@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Penny for insurers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&amp;family=IBM+Plex+Mono:wght@500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="penny.css">
+<style>
+.hero{background:#fff;border-bottom:1px solid var(--line);padding:64px 0 72px}
+.hero .wrap{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:40px;align-items:center}
+.hero .copy{display:flex;flex-direction:column;gap:18px}
+.hero .actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:6px}
+.proof{display:flex;flex-direction:column;gap:14px;background:var(--paper-2);border:1px solid var(--line);border-radius:20px;padding:26px}
+.proof .row{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);font-size:15px}
+.proof .row:last-child{border-bottom:none}
+.proof .row b{font-family:'IBM Plex Mono',monospace;font-weight:500;white-space:nowrap}
+.rsection{background:var(--ink);color:#fff}
+.rsection .wrap{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:40px;align-items:start}
+.rsection .q{font-family:'Bricolage Grotesque',sans-serif;font-size:clamp(26px,3.4vw,38px);line-height:1.15;letter-spacing:-0.8px;border-left:4px solid var(--cu-light);padding-left:20px}
+.rsection .fact{border-top-color:#3A414C}
+.rsection .fact h3{color:#fff}
+.rsection .fact p{color:#D6D3CD}
+.sim{background:#fff;border:1px solid var(--line);border-radius:20px;padding:28px;display:flex;flex-direction:column;gap:22px}
+.sim .read{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px}
+.sim .stat{background:var(--paper-2);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:4px}
+.sim .stat b{font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:500}
+.sim .stat span{font-size:13.5px;color:var(--muted)}
+.meter{height:14px;background:var(--line-soft);border-radius:999px;overflow:hidden;position:relative}
+.meter i{display:block;height:100%;background:var(--cu);width:0;transition:width .5s var(--ease)}
+.marks{position:relative;height:22px;font-size:12px;color:var(--muted)}
+.marks span{position:absolute;transform:translateX(-50%);white-space:nowrap}
+.marks span::before{content:'';display:block;width:1px;height:8px;background:#B9B4AA;margin:0 auto 2px}
+.demo{background:#fff;border:1px solid var(--line);border-radius:20px;overflow:hidden}
+.demo .bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:16px 22px;border-bottom:1px solid var(--line);background:var(--paper-2)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:#fff}
+.seg button{border:none;background:transparent;font:inherit;font-size:14px;font-weight:600;padding:10px 16px;cursor:pointer;color:var(--body);min-height:44px}
+.seg button[aria-pressed="true"]{background:var(--ink);color:#fff}
+.demo table{width:100%;border-collapse:collapse;font-size:15px}
+.demo th,.demo td{text-align:left;padding:14px 22px;border-bottom:1px solid var(--line-soft);vertical-align:top}
+.demo th{font-size:13px;color:var(--muted);font-weight:600}
+.demo td.num{font-family:'IBM Plex Mono',monospace;white-space:nowrap;text-align:right}
+.demo th.num{text-align:right}
+.demo .why{font-size:13.5px;color:var(--muted);display:block;margin-top:4px}
+.demo tfoot td{font-weight:600;border-bottom:none;background:var(--paper-2)}
+.demo .view{display:none}.demo .view.on{display:block}
+.addons{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px}
+.addon{background:var(--ink);color:#fff;border-radius:18px;padding:28px;display:flex;flex-direction:column;gap:14px}
+.addon h3{color:#fff}
+.addon p,.addon li{color:#D6D3CD;font-size:15px}
+.addon ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+.cta .wrap{display:flex;flex-wrap:wrap;gap:24px;align-items:center;justify-content:space-between}
+</style>
+</head>
+<body>
+<header class="site">
+<div class="wrap">
+<a class="brand" href="index.html">
+<svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="15" fill="none" stroke="#A9481F" stroke-width="2.5"/><circle cx="17" cy="17" r="10" fill="none" stroke="#A9481F" stroke-width="1.2"/><path d="M14 23V11h4.2a3.4 3.4 0 0 1 0 6.8H14" fill="none" stroke="#A9481F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<b>Penny</b><small>by Propono</small>
+</a>
+<nav class="main" aria-label="Main">
+<a href="index.html#tools">Free tools</a>
+<a href="index.html#review">Audit Review</a>
+<a href="insurers.html" aria-current="page">For insurers</a>
+<a href="research.html">Research</a>
+<a href="#security">Security</a>
+<a href="index.html#pricing">Pricing</a>
+</nav>
+<a class="btn" href="#benchmark">Book a Benchmark Audit</a>
+</div>
+</header>
+
+<main>
+<section class="hero">
+<div class="wrap">
+<div class="copy">
+<span class="kicker">Penny for insurers</span>
+<h1>The full Propono audit system, with a friendly face for your insureds.</h1>
+<p class="lede">Penny collects documents, pre-builds the audit, answers insured questions and settles first-round disputes. Your auditors make every final decision. Automation grows only where your own numbers prove it safe.</p>
+<div class="actions">
+<a class="btn" href="#benchmark">Book a free Benchmark Audit</a>
+<a class="btn ghost" href="#research">Why it can be trusted</a>
+</div>
+</div>
+<div class="proof" aria-label="What Penny delivers">
+<span class="kicker">What changes for your audit operation</span>
+<div class="row"><span>Document collection</span><b>Penny, 24/7</b></div>
+<div class="row"><span>First pass on every audit</span><b>Drafted and cited</b></div>
+<div class="row"><span>Insured questions and disputes</span><b>Neutral first review</b></div>
+<div class="row"><span>Final decision</span><b>Your auditor</b></div>
+<div class="row"><span>Automation</span><b>Earned, in dollars</b></div>
+<div class="row"><span>Security</span><b>SOC 2 Type II</b></div>
+</div>
+</div>
+</section>
+
+<section class="rsection" id="research">
+<div class="wrap">
+<div style="display:flex;flex-direction:column;gap:20px">
+<span class="kicker">Grounded in research</span>
+<p class="q">How does an AI system prove which audit decisions it can make on its own?</p>
+<p>That question is the subject of our research proposal to the U.S. National Science Foundation's SBIR program. Instead of asking you to trust an accuracy percentage, Penny is designed to guarantee a ceiling on dollar-weighted premium error for any audit type it automates, certified on your own corrections.</p>
+<div><a class="btn light" href="research.html">Read the research plan</a></div>
+</div>
+<div class="facts">
+<div class="fact"><h3>Guarantees in dollars</h3><p>A system that is right 95% of the time can still get most of the dollars wrong. Penny bounds the dollars.</p></div>
+<div class="fact"><h3>Your numbers, your pace</h3><p>Each audit type earns automation only after the bound is certified on your auditors' corrections.</p></div>
+<div class="fact"><h3>Valid as rules change</h3><p>When manuals update or your book shifts, Penny recalibrates or falls back to review.</p></div>
+<div class="fact"><h3>Inspectable by regulators</h3><p>Every run records its inputs, rule version and model version, so any result can be reproduced.</p></div>
+</div>
+</div>
+</section>
+
+<section>
+<div class="wrap">
+<div class="head">
+<span class="kicker">How it works</span>
+<h2>From policy expiration to final premium, in one system.</h2>
+</div>
+<ol class="flow">
+<li><span class="n">01</span><strong>Penny collects</strong><span>Talks to your insured by chat, email, text or phone, loops in their bookkeeper or payroll provider, and keeps asking until the file is complete.</span></li>
+<li><span class="n">02</span><strong>Penny pre-builds</strong><span>Proposed class splits, payroll and state allocation, and flags on anything unclear, each with a confidence level and the rule behind it.</span></li>
+<li class="key"><span class="n">03</span><strong>Your auditor decides</strong><span>Review, correct or send back. Auditors can ask Penny about any class code or rule and get an answer with citations.</span></li>
+<li><span class="n">04</span><strong>Penny handles questions</strong><span>Insureds see every line explained. Disputes Penny can't settle go to your auditor, already organized.</span></li>
+<li><span class="n">05</span><strong>Every correction teaches</strong><span>Auditor decisions become training data and calibration data for your book, so the next audit starts closer to right.</span></li>
+</ol>
+</div>
+</section>
+
+<section class="white" id="earned">
+<div class="wrap">
+<div class="head">
+<span class="kicker">Earned automation</span>
+<h2>You decide how much Penny does. Your data decides when.</h2>
+<p class="lede">Audit types move up only when two numbers say so: how often Penny's work clears with zero auditor changes, and the dollar value of the changes when they happen. Drag the slider to see how the frontier moves for one audit type.</p>
+</div>
+<div class="sim">
+<label for="corr" style="font-weight:600">Auditor-confirmed corrections collected for this audit type: <span id="corrN" class="mono">0</span></label>
+<input type="range" id="corr" min="0" max="240" value="0" step="4" aria-describedby="simnote">
+<div class="meter" aria-hidden="true"><i id="meter"></i></div>
+<div class="marks" aria-hidden="true"><span style="left:16.7%">bound certified</span><span style="left:50%">bound certified</span><span style="left:83.3%">bound certified</span></div>
+<div class="read">
+<div class="stat"><b id="stage">Assisted</b><span>Stage for this audit type</span></div>
+<div class="stat"><b id="share">0%</b><span>Files Penny clears without auditor review</span></div>
+<div class="stat"><b id="ceiling">Not yet certified</b><span>Dollar error ceiling, at your chosen confidence</span></div>
+</div>
+<div class="ladder" id="ladder">
+<div><strong>Assisted</strong><span>Your auditor reviews every file. Collection and pre-build save time from day one, with no trust leap.</span></div>
+<div><strong>Supervised</strong><span>Proven audit types clear with sampled review. Your team spends its time on complex files.</span></div>
+<div><strong>Automated</strong><span>You turn off review for a proven audit type. Anything unusual still goes to an auditor.</span></div>
+</div>
+<p id="simnote" class="small muted">Illustration of the intended behavior, not results. Thresholds depend on your book and the confidence level you set.</p>
+</div>
+</div>
+</section>
+
+<section id="same">
+<div class="wrap">
+<div class="head">
+<span class="kicker">Same answer for both sides</span>
+<h2>Your auditor and your insured see the same result.</h2>
+<p class="lede">The same documents, rules and model version always produce the same numbers. Only the explanation changes to fit the reader. That is what keeps disputes short and keeps Penny on nobody's side but the evidence's.</p>
+</div>
+<div class="demo">
+<div class="bar">
+<span style="font-weight:600">Sample audit, residential carpentry contractor</span>
+<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+<span class="pill ok" id="same-badge">Identical result</span>
+<div class="seg" role="group" aria-label="Choose a view">
+<button type="button" aria-pressed="true" data-view="auditor">Auditor view</button>
+<button type="button" aria-pressed="false" data-view="insured">Insured view</button>
+</div>
+</div>
+</div>
+<div class="view on" data-view="auditor">
+<div class="tablebox">
+<table>
+<thead><tr><th>Class</th><th>Basis</th><th class="num">Audited payroll</th><th class="num">Rate / $100</th><th class="num">Premium</th></tr></thead>
+<tbody id="aud-rows"></tbody>
+<tfoot><tr><td colspan="4">Audited premium, before experience mod, fees and taxes</td><td class="num" id="aud-total"></td></tr></tfoot>
+</table>
+</div>
+</div>
+<div class="view" data-view="insured">
+<div class="tablebox">
+<table>
+<thead><tr><th>Who</th><th>Why this class</th><th class="num">Pay counted</th><th class="num">Premium</th></tr></thead>
+<tbody id="ins-rows"></tbody>
+<tfoot><tr><td colspan="3">Your audited premium, before your experience mod, fees and taxes</td><td class="num" id="ins-total"></td></tr></tfoot>
+</table>
+</div>
+</div>
+<p class="small muted" style="padding:14px 22px">Sample figures for illustration. Rates and class codes vary by state and carrier.</p>
+</div>
+</div>
+</section>
+
+<section>
+<div class="wrap">
+<div class="head">
+<span class="kicker">For your team and leadership</span>
+<h2>What your people get.</h2>
+</div>
+<div class="grid">
+<div class="card"><h3>Auditors</h3><p>A complete, validated packet for every audit. No chasing. An assistant that answers class code and rule questions with sources.</p></div>
+<div class="card"><h3>Audit leadership</h3><p>A director console with automation readiness by class and state, audit aging, team workload, and plain-English questions about your book.</p></div>
+<div class="card"><h3>Your insureds</h3><p>A neutral first review of their audit, every line explained, and a clear path to your auditor when something is still wrong.</p></div>
+<div class="card"><h3>Compliance</h3><p>A full record of every request, upload, suggestion and decision. SOC 2 Type II certified. Your data is never shared with other carriers.</p><a class="more" href="#security">How we protect data</a></div>
+</div>
+</div>
+</section>
+
+
+<section class="white" id="security">
+<div class="wrap">
+<div class="head">
+<span class="kicker">Data security</span>
+<h2>Built to pass your security review.</h2>
+<p class="lede">The Propono platform is SOC 2 Type II certified. Your book is isolated from every other carrier's, every action is logged, and any Penny result can be reproduced exactly from its inputs, rule version and model version.</p>
+</div>
+<div class="grid">
+<div class="card"><h3>SOC 2 Type II</h3><p>Independently audited controls across security, availability, processing integrity, confidentiality and privacy, tested over months.</p></div>
+<div class="card"><h3>Isolated by carrier</h3><p>Nothing is pooled across carriers except learned correction patterns, with no payroll, premium or policyholder names.</p></div>
+<div class="card"><h3>Your team, your controls</h3><p>Single sign-on, role-based access, MFA and a full audit trail. Retention periods you set.</p></div>
+<div class="card"><h3>Supports your obligations</h3><p>Data processing terms written for state insurance data security laws. SOC 2 report, pen test summary and questionnaire available under NDA.</p></div>
+</div>
+<p style="margin-top:20px;font-size:15px"><a href="security.html"><strong>Read the full data security page</strong></a> or <a href="security.html#report">request the SOC 2 report</a>.</p>
+</div>
+</section>
+
+<section id="upgrades">
+<div class="wrap">
+<div class="head">
+<span class="kicker">Upgrade options</span>
+<h2>Reach insureds where they actually answer.</h2>
+<p class="lede">Most audit delays come from waiting on the insured. Add voice and text so Penny can follow up on their schedule, not yours.</p>
+</div>
+<div class="addons">
+<div class="addon">
+<span class="badge">Penny Text</span>
+<h3>Document requests and reminders by text.</h3>
+<ul>
+<li>Requests specific documents and sends a secure upload link</li>
+<li>Accepts photos of payroll reports and certificates</li>
+<li>Answers simple questions and escalates the rest</li>
+<li>Reminds insureds before deadlines, so audits do not stall</li>
+</ul>
+<div class="convo" aria-label="Example text conversation">
+<span class="m p">Hi, this is Penny for your workers' comp audit. I still need your Q3 941. Upload it here: [secure link]</span>
+<span class="m u">Can I just send a photo?</span>
+<span class="m p">Yes. A clear photo of each page works. I'll check it and tell you if anything is missing.</span>
+</div>
+</div>
+<div class="addon">
+<span class="badge">Penny Voice</span>
+<h3>A patient phone call, any time of day.</h3>
+<ul>
+<li>Calls insureds to explain the audit and what's needed</li>
+<li>Answers inbound calls 24/7 in plain language</li>
+<li>Walks owners and bookkeepers through uploads step by step</li>
+<li>Logs every call with a summary for your auditor</li>
+</ul>
+<div class="convo" aria-label="Example phone call">
+<span class="m u">Why is my bill higher than my estimate?</span>
+<span class="m p">Your payroll for roofing came in above the policy estimate. I can walk you through each line, and if anything looks wrong, I'll send it to your auditor.</span>
+<span class="m u">Okay, walk me through it.</span>
+</div>
+</div>
+</div>
+<p class="small muted" style="margin-top:20px">Voice and text are add-ons to any insurer plan, priced by usage. Insureds can opt out of calls and texts at any time.</p>
+</div>
+</section>
+
+<section class="white" id="plans">
+<div class="wrap">
+<div class="head">
+<span class="kicker">Plans</span>
+<h2>Pay per audit. The price falls as automation rises.</h2>
+</div>
+<div class="tablebox">
+<table class="plans">
+<thead><tr><th scope="col">Plan</th><th scope="col">Who runs the audit</th><th scope="col">Price</th></tr></thead>
+<tbody>
+<tr><td><strong>We Audit</strong></td><td>Propono's licensed auditors run it end to end on the platform</td><td class="price">$99 / $149 / $199 per audit</td></tr>
+<tr><td><strong>You Audit</strong></td><td>Your auditors run it inside the platform</td><td class="price">$19 / $29 / $39 per audit</td></tr>
+<tr><td><strong>Fully automated</strong></td><td>Review turned off for audit types proven on your data</td><td class="price">$9 per audit</td></tr>
+<tr><td><strong>Custom model</strong></td><td>A model trained only on your own audits</td><td class="price">One-time setup</td></tr>
+<tr><td><strong>Penny Voice and Text</strong></td><td>Outreach to insureds by phone and text</td><td class="price">Add-on, by usage</td></tr>
+</tbody>
+</table>
+</div>
+<p class="small muted" style="margin-top:16px">Prices by audit complexity. No volume minimums. Dispute portal and director console included.</p>
+</div>
+</section>
+
+<section class="dark cta" id="benchmark">
+<div class="wrap">
+<div style="display:flex;flex-direction:column;gap:10px;max-width:640px">
+<h2>Start with a free Benchmark Audit.</h2>
+<p>Send us 3 closed audits. In 5 days you get a side-by-side comparison of time, cost and accuracy on your own files. No systems work on your side.</p>
+</div>
+<a class="btn" href="mailto:[CONTACT EMAIL]?subject=Benchmark%20Audit">Book a Benchmark Audit</a>
+</div>
+</section>
+</main>
+
+<footer>
+<div class="wrap">
+<div style="display:flex;flex-direction:column;gap:4px;max-width:640px">
+<strong>Penny by Propono</strong>
+<span>Penny gives a neutral first review. Your auditors make the final decision, and insureds keep every appeal right their state provides.</span>
+</div>
+<nav aria-label="Footer"><a href="index.html">Home</a><a href="research.html">Research</a><a href="security.html">Data security</a><span>© 2026 Propono Systems Inc. · SOC 2 Type II certified</span></nav>
+</div>
+</footer>
+
+<script src="penny.js"></script>
+<script src="insurers.js"></script>
+</body>
+</html>

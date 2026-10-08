@@ -14,7 +14,8 @@ src/engine/            the audit engine (pure, no I/O)
   tools/               the four tools: normalize(raw) -> input, run(input, rules) -> output
   engine.ts            runTool / replayRun, run records and fingerprints
 src/runlog/store.ts    run log with per-tenant retention (memory and JSON Lines)
-src/chat/              keyword router (no model) and Claude tool-use loop
+src/chat/              keyword router (no model), Claude tool-use loop, sales facts and demos
+src/leads/store.ts     early-access sign-ups (JSON Lines + optional webhook)
 src/server/            HTTP API, static files, rate limits, security headers
 public/                the chat-first web app (vanilla JS, Propono brand)
 test/                  node:test suites
@@ -41,10 +42,14 @@ The free tools promise not to keep what people type, while the plan requires a r
 - **Verify:** the user sends the receipt back. The server matches it against the stored hashes (an altered receipt gets a 409), then replays it.
 - **Signed-in and carrier tenants (full):** later phases store the whole record under their data terms. Carrier, standalone-business and partner data stay walled off by tenant; only rules and logic are shared.
 
-## Chat
+## Chat: free tools and salesperson
 
-- **Without a model:** `chat/router.ts` maps the message to a tool. It runs class code lookups directly and opens the right form for everything else.
-- **With a model:** `chat/claude.ts` runs a tool-use loop. The system prompt forbids the model from doing arithmetic or stating figures that don't come from a tool result. Every tool call goes through `runTool`, so it is logged like any other run. Server-side refusal fallback is enabled (`fallbacks: "default"`). If the model call fails, chat falls back to the router.
+- **Without a model:** `chat/router.ts` answers sales questions first (`chat/sales.ts`: pricing, sign-up, demos, insurers, partners, security, research, Audit Review), then maps audit questions to a tool. Bare job words ("roofer") search class codes.
+- **With a model:** `chat/claude.ts` runs a tool-use loop with the four engine tools plus two UI tools, `start_demo` and `start_signup`. The system prompt, `FACTS` and the site pages' text form a stable prefix that is prompt-cached across visitors. The model may not do arithmetic or state figures that don't come from a tool result, and may only state product facts found in `FACTS` or on the site. If the model call fails, chat falls back to the router.
+- **Demos** (`public/app.js`) use sample businesses and demo rates, but every dollar figure comes from real engine runs, with receipts and Verify.
+- **Sign-up** happens in a form card with an explicit consent checkbox; contact details go straight to `/api/leads` and never pass through the model.
+
+`FACTS` in `chat/knowledge.ts` is the source of truth for what Penny says about itself. Update it whenever plans, prices or availability change.
 
 ## Data still to load before public launch
 

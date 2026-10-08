@@ -1,410 +1,680 @@
-// Penny front end. All user and server text goes through textContent, never innerHTML.
+// Penny homepage chat. The conversation design matches the preview site; every
+// answer now comes from the audit engine (/api/tools, /api/chat), carries a
+// receipt with its rule and engine versions, and can be verified by replay.
+// All text goes into the page through textContent, never innerHTML.
+(function () {
+  var chat = document.getElementById("chat");
+  var chipsEl = document.getElementById("chips");
+  var input = document.getElementById("penny-input");
+  var sendBtn = document.getElementById("send");
 
-const STATES = "AL AK AZ AR CA CO CT DE DC FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY".split(" ");
+  var STATES = {
+    AL: "alabama", AK: "alaska", AZ: "arizona", AR: "arkansas", CA: "california", CO: "colorado", CT: "connecticut",
+    DE: "delaware", DC: "district of columbia", FL: "florida", GA: "georgia", HI: "hawaii", ID: "idaho", IL: "illinois",
+    IN: "indiana", IA: "iowa", KS: "kansas", KY: "kentucky", LA: "louisiana", ME: "maine", MD: "maryland",
+    MA: "massachusetts", MI: "michigan", MN: "minnesota", MS: "mississippi", MO: "missouri", MT: "montana",
+    NE: "nebraska", NV: "nevada", NH: "new hampshire", NJ: "new jersey", NM: "new mexico", NY: "new york",
+    NC: "north carolina", ND: "north dakota", OH: "ohio", OK: "oklahoma", OR: "oregon", PA: "pennsylvania",
+    RI: "rhode island", SC: "south carolina", SD: "south dakota", TN: "tennessee", TX: "texas", UT: "utah",
+    VT: "vermont", VA: "virginia", WA: "washington", WV: "west virginia", WI: "wisconsin", WY: "wyoming",
+  };
 
-const TOOL_INFO = {
-  class_code_lookup: { title: "Class code lookup and compare", blurb: "Search codes by plain words, or compare one code across states." },
-  audit_bill_estimator: { title: "Audit bill estimator", blurb: "Payroll and rates by class to an expected audit result, step by step." },
-  officer_payroll: { title: "Officer payroll calculator", blurb: "What officer and owner pay counts, with state minimums and maximums." },
-  document_checklist: { title: "Audit document checklist", blurb: "The records to gather for your business, and why each one matters." },
-};
+  var GREETING =
+    "Hi, I'm Penny. I can look up a class code, estimate an audit bill, work out officer payroll, or build your document checklist. I can also show you a demo, walk you through plans, or get you signed up.\n\nPick one below, or just ask.";
 
-// ---------- DOM helper ----------
+  var S = { flow: null, step: 0, ans: {} };
+  var history = [];
+  var busy = false;
 
-function h(tag, attrs = {}, ...children) {
-  const el = document.createElement(tag);
-  for (const [key, value] of Object.entries(attrs)) {
-    if (value === undefined || value === null || value === false) continue;
-    if (key === "class") el.className = value;
-    else if (key.startsWith("on")) el.addEventListener(key.slice(2), value);
-    else if (key === "dataset") Object.assign(el.dataset, value);
-    else if (value === true) el.setAttribute(key, "");
-    else el.setAttribute(key, String(value));
+  // ---------- small helpers ----------
+
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined) e.textContent = text;
+    return e;
   }
-  for (const child of children.flat()) {
-    if (child === undefined || child === null || child === false) continue;
-    el.append(child instanceof Node ? child : document.createTextNode(String(child)));
+
+  function avatar(size) {
+    var a = el("span", "avatar", "P");
+    if (size) { a.style.width = size + "px"; a.style.height = size + "px"; a.style.fontSize = size / 2 + "px"; }
+    return a;
   }
-  return el;
-}
 
-const field = (label, input) => h("label", { class: "field" }, h("span", {}, label), input);
-const stateSelect = (name, value, { optional = false } = {}) =>
-  h("select", { name },
-    optional ? h("option", { value: "" }, "Any state") : null,
-    STATES.map((s) => h("option", { value: s, selected: s === value }, s)));
+  function num(t) {
+    var cleaned = String(t).replace(/[$,\s]/g, "");
+    if (!/^\d+(\.\d+)?$/.test(cleaned)) return null;
+    return cleaned;
+  }
 
-async function api(path, body) {
-  const res = await fetch(path, {
-    method: body === undefined ? "GET" : "POST",
-    headers: { "Content-Type": "application/json" },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
-  return data;
-}
+  function parseState(t) {
+    var s = t.trim();
+    if (/^[a-z]{2}$/i.test(s) && STATES[s.toUpperCase()]) return s.toUpperCase();
+    var low = s.toLowerCase();
+    for (var code in STATES) if (STATES[code] === low) return code;
+    return null;
+  }
 
-// ---------- Result rendering ----------
+  function statesIn(t) {
+    var found = [];
+    (t.match(/\b[A-Z]{2}\b/g) || []).forEach(function (s) { if (STATES[s] && found.indexOf(s) < 0) found.push(s); });
+    var low = t.toLowerCase();
+    for (var code in STATES) if (new RegExp("\\b" + STATES[code] + "\\b").test(low) && found.indexOf(code) < 0) found.push(code);
+    return found.sort();
+  }
 
-function table(headers, rows, numericCols = []) {
-  return h("div", { class: "table-wrap" },
-    h("table", {},
-      h("thead", {}, h("tr", {}, headers.map((t, i) => h("th", { class: numericCols.includes(i) ? "num" : undefined }, t)))),
-      h("tbody", {}, rows.map((r) => h("tr", {}, r.map((c, i) => h("td", { class: numericCols.includes(i) ? "num" : undefined }, c)))))));
-}
+  function yes(t) { return /^\s*y/i.test(t); }
 
-function warnings(list) {
-  if (!list || !list.length) return null;
-  return h("ul", { class: "warnings" }, list.map((w) => h("li", {}, w)));
-}
+  async function api(path, body) {
+    var res = await fetch(path, {
+      method: body === undefined ? "GET" : "POST",
+      headers: { "Content-Type": "application/json" },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    var data = await res.json().catch(function () { return {}; });
+    if (!res.ok) throw new Error(data.error || "Something went wrong (" + res.status + ").");
+    return data;
+  }
 
-const RENDER = {
-  class_code_lookup(out) {
-    const parts = [];
-    if (out.comparison && out.comparison.byState.length) {
-      parts.push(table(["State", "Governed by", `Class ${out.comparison.code}`],
-        out.comparison.byState.map((s) => [
-          `${s.stateName} (${s.state})`,
-          s.bureau,
-          s.found
-            ? s.title
-            : s.equivalent
-              ? `Not used here. Closest code: ${s.equivalent.code}${s.equivalent.title ? ` (${s.equivalent.title})` : ""}. ${s.equivalent.note}`
-              : s.note || "Not found",
-        ])));
+  function runTool(name, input) {
+    return api("/api/tools/" + name, input).then(function (d) { return d.receipt; });
+  }
+
+  // ---------- messages ----------
+
+  function add(from, content) {
+    var d = el("div", "msg" + (from === "user" ? " user" : ""));
+    if (from === "penny") d.appendChild(avatar(28));
+    var b = el("div", "b");
+    if (typeof content === "string") b.textContent = content;
+    else b.appendChild(content);
+    d.appendChild(b);
+    chat.appendChild(d);
+    chat.scrollTop = chat.scrollHeight;
+    return d;
+  }
+
+  function typing() {
+    var t = el("div", "typing");
+    t.appendChild(avatar(28));
+    var dots = el("div", "dots");
+    dots.appendChild(el("i")); dots.appendChild(el("i")); dots.appendChild(el("i"));
+    t.appendChild(dots);
+    chat.appendChild(t);
+    chat.scrollTop = chat.scrollHeight;
+    return t;
+  }
+
+  function pennySays(content, delay) {
+    if (window.pennyReduced) { add("penny", content); return; }
+    var t = typing();
+    setTimeout(function () { t.remove(); add("penny", content); }, delay || 500);
+  }
+
+  /** Run engine work behind a typing indicator, then show what it returns. */
+  async function pennyWorks(work) {
+    busy = true;
+    var t = typing();
+    try {
+      var content = await work();
+      t.remove();
+      if (content) add("penny", content);
+    } catch (err) {
+      t.remove();
+      add("penny", "I couldn't run that: " + err.message);
+    } finally {
+      busy = false;
     }
-    if (out.matches.length && (!out.comparison || !out.comparison.byState.length)) {
-      parts.push(table(["Code", "Title", "Table"], out.matches.map((m) => [m.code, m.title, m.system])));
-    }
-    if (out.notes.length) parts.push(warnings(out.notes));
-    return parts;
-  },
+  }
 
-  audit_bill_estimator(out) {
-    const parts = [h("div", { class: "big" }, out.totalAuditPremium.display)];
-    if (out.comparison) {
-      const c = out.comparison;
-      parts.push(h("p", { class: "sub" },
-        c.result === "no change"
-          ? `Matches the deposit premium of ${c.depositPremium.display}.`
-          : `Likely ${c.result} of ${c.difference.display} against the deposit premium of ${c.depositPremium.display}.`));
-    } else {
-      parts.push(h("p", { class: "sub" }, "Estimated audit premium."));
-    }
-    parts.push(h("h4", {}, "By class"));
-    parts.push(table(["Class", "Payroll", "Rate per $100", "Premium"],
-      out.lines.map((l) => [l.description ? `${l.classCode} ${l.description}` : l.classCode, l.payroll.display, l.rate, l.premium.display]), [1, 2, 3]));
-    parts.push(h("h4", {}, "How it adds up"));
-    parts.push(table(["Step", "How", "Amount"], out.steps.map((s) => [s.label, s.detail, s.amount.display]), [2]));
-    if (out.drivers.length) {
-      parts.push(h("h4", {}, "What moves your bill"));
-      parts.push(h("ul", {}, out.drivers.map((d) => h("li", {}, `Each $10,000 of payroll in class ${d.classCode} changes the bill by ${d.per10kPayroll.display}.`))));
-    }
-    parts.push(warnings(out.warnings));
-    return parts;
-  },
+  // ---------- receipts ----------
 
-  officer_payroll(out) {
-    return [
-      h("div", { class: "big" }, out.totalCountedPayroll.display),
-      h("p", { class: "sub" }, "Officer and owner payroll counted on the audit."),
-      table(["Person", "Actual pay", "Counted", "Why"],
-        out.people.map((p) => [p.name, p.actualPayroll.display, p.countedPayroll.display, p.reason]), [1, 2]),
-      out.limits.minimum
-        ? h("p", { class: "sub" }, `Limits used (${out.limits.source}, ${out.limits.proratedFor}): minimum ${out.limits.minimum.display}, maximum ${out.limits.maximum.display}, owner amount ${out.limits.ownerAmount.display}.`)
-        : null,
-      warnings(out.warnings),
-    ];
-  },
+  function saveReceipt(receipt) {
+    var blob = new Blob([JSON.stringify(receipt, null, 2)], { type: "application/json" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "penny-receipt-" + receipt.runId.slice(0, 8) + ".json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
 
-  document_checklist(out) {
-    return [
-      h("p", { class: "sub" }, `${out.counts.required} required and ${out.counts.recommended} recommended items. Tick them off as you go.`),
-      out.groups.map((g) => [
-        h("h4", {}, g.group),
-        h("ul", { class: "checklist" }, g.items.map((i) =>
-          h("li", {},
-            h("input", { type: "checkbox", "aria-label": i.label }),
-            h("div", {}, i.label, i.priority === "recommended" ? " (recommended)" : "", h("small", {}, i.why))))),
-      ]),
-      h("h4", {}, "Tips"),
-      h("ul", {}, out.tips.map((t) => h("li", {}, t))),
-    ];
-  },
-};
-
-function saveReceipt(receipt) {
-  const blob = new Blob([JSON.stringify(receipt, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = h("a", { href: url, download: `penny-receipt-${receipt.runId.slice(0, 8)}.json` });
-  document.body.append(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
-
-function resultCard(receipt) {
-  const status = h("span", { class: "badge badge-muted" }, "Not verified yet");
-  const verify = h("button", {
-    type: "button",
-    class: "btn btn-ghost btn-small",
-    async onclick() {
+  function receiptBar(receipt) {
+    var bar = el("div", "receipt");
+    if (receipt.dataStatus === "sample") bar.appendChild(el("span", "pill", "Sample data"));
+    var id = el("span", "", "Run ");
+    id.appendChild(el("code", "", receipt.runId.slice(0, 8)));
+    id.title = "Engine " + receipt.engineVersion + " · rules " + receipt.rules.map(function (r) { return r.id + "@" + r.version; }).join(", ");
+    bar.appendChild(id);
+    var status = el("span", "");
+    var verify = el("button", "", "Verify");
+    verify.type = "button";
+    verify.onclick = async function () {
       verify.disabled = true;
       try {
-        const r = await api("/api/replay", { receipt });
-        status.className = `badge ${r.reproduced ? "badge-success" : "badge-warning"}`;
-        status.textContent = r.reproduced ? "Verified: same answer on re-run" : `Did not match: ${r.reason}`;
+        var r = await api("/api/replay", { receipt: receipt });
+        status.className = r.reproduced ? "pill ok" : "pill";
+        status.textContent = r.reproduced ? "Verified: same answer on re-run" : "Did not match: " + r.reason;
       } catch (err) {
-        status.className = "badge badge-warning";
+        status.className = "pill";
         status.textContent = err.message;
       } finally {
         verify.disabled = false;
       }
-    },
-  }, "Verify");
-
-  const rules = receipt.rules.map((r) => `${r.id}@${r.version}`).join(", ");
-  return h("article", { class: "result" },
-    h("div", { class: "result-head" },
-      h("h3", {}, TOOL_INFO[receipt.tool]?.title ?? receipt.tool),
-      receipt.dataStatus === "sample" ? document.getElementById("sample-note").content.cloneNode(true) : null),
-    RENDER[receipt.tool](receipt.output),
-    h("div", { class: "provenance" },
-      h("span", {}, "Run ", h("code", {}, receipt.runId.slice(0, 8)), ` · engine ${receipt.engineVersion} · rules ${rules}`),
-      h("span", { class: "actions" }, status, verify,
-        h("button", { type: "button", class: "btn btn-ghost btn-small", onclick: () => saveReceipt(receipt) }, "Save receipt"))));
-}
-
-// ---------- Chat ----------
-
-const messagesEl = document.getElementById("messages");
-const chatForm = document.getElementById("chat-form");
-const chatInput = document.getElementById("chat-input");
-const history = [];
-
-async function ask(text) {
-  const message = text.trim();
-  if (!message) return;
-  history.push({ role: "user", content: message });
-  messagesEl.append(h("div", { class: "msg msg-user" }, message));
-  const pending = h("div", { class: "msg msg-penny" }, h("p", {}, "Working on it..."));
-  messagesEl.append(pending);
-  const button = chatForm.querySelector("button");
-  button.disabled = true;
-  try {
-    const data = await api("/api/chat", { messages: history.slice(-20) });
-    history.push({ role: "assistant", content: data.reply });
-    pending.replaceChildren(h("p", {}, data.reply), ...(data.receipts || []).map(resultCard));
-    if (data.openTool) openTool(data.openTool.tool, data.openTool.prefill || {});
-  } catch (err) {
-    history.pop();
-    pending.replaceChildren(h("p", { class: "msg-error" }, err.message));
-  } finally {
-    button.disabled = false;
+    };
+    var save = el("button", "", "Save receipt");
+    save.type = "button";
+    save.onclick = function () { saveReceipt(receipt); };
+    bar.appendChild(verify);
+    bar.appendChild(save);
+    bar.appendChild(status);
+    return bar;
   }
-}
 
-chatForm.addEventListener("submit", (e) => {
-  e.preventDefault();
-  const text = chatInput.value;
-  chatInput.value = "";
-  ask(text);
-});
-document.getElementById("suggestions").addEventListener("click", (e) => {
-  const chip = e.target.closest("[data-ask]");
-  if (chip) ask(chip.dataset.ask);
-});
+  function answer(text, receipts) {
+    var frag = document.createDocumentFragment();
+    frag.appendChild(document.createTextNode(text));
+    (receipts || []).forEach(function (r) { frag.appendChild(receiptBar(r)); });
+    return frag;
+  }
 
-// ---------- Tool forms ----------
+  function warningsText(list) {
+    return list && list.length ? "\n\n" + list.map(function (w) { return "Note: " + w; }).join("\n") : "";
+  }
 
-const grid = document.getElementById("tool-grid");
-const panel = document.getElementById("tool-panel");
-const cards = {};
+  // ---------- result summaries ----------
 
-for (const [name, info] of Object.entries(TOOL_INFO)) {
-  cards[name] = h("button", { type: "button", class: "tool-card", "aria-expanded": "false", "aria-controls": "tool-panel", onclick: () => openTool(name, {}) },
-    h("strong", {}, info.title), h("span", {}, info.blurb));
-  grid.append(cards[name]);
-}
-
-const today = () => new Date().toISOString().slice(0, 10);
-const val = (form, name) => form.elements.namedItem(name)?.value?.trim() ?? "";
-const checked = (form, name) => Boolean(form.elements.namedItem(name)?.checked);
-const splitList = (s) => s.split(/[\s,]+/).map((x) => x.trim()).filter(Boolean);
-
-function lineRow() {
-  const row = h("div", { class: "row row-lines" },
-    h("input", { name: "classCode", placeholder: "8810", inputmode: "numeric", "aria-label": "Class code", required: true }),
-    h("input", { name: "description", placeholder: "Description (optional)", "aria-label": "Description" }),
-    h("input", { name: "payroll", placeholder: "Payroll $", inputmode: "decimal", "aria-label": "Payroll", required: true }),
-    h("input", { name: "rate", placeholder: "Rate", inputmode: "decimal", "aria-label": "Rate per $100", required: true }),
-    h("button", { type: "button", class: "remove", "aria-label": "Remove line", onclick: () => row.remove() }, "×"));
-  return row;
-}
-
-function personRow() {
-  const row = h("div", { class: "row row-people" },
-    h("input", { name: "name", placeholder: "Name", "aria-label": "Name", required: true }),
-    h("input", { name: "payroll", placeholder: "Pay received $", inputmode: "decimal", "aria-label": "Pay received", required: true }),
-    h("label", { class: "check" }, h("input", { type: "checkbox", name: "included", checked: true }), "Included"),
-    h("button", { type: "button", class: "remove", "aria-label": "Remove person", onclick: () => row.remove() }, "×"));
-  return row;
-}
-
-const rowValues = (container) => [...container.querySelectorAll(".row")].map((row) => {
-  const get = (n) => row.querySelector(`[name="${n}"]`);
-  return { get, value: (n) => get(n)?.value?.trim() ?? "" };
-});
-
-const FORMS = {
-  class_code_lookup(prefill) {
-    const form = h("form", {},
-      h("div", { class: "form-grid" },
-        field("Words or a code", h("input", { name: "q", placeholder: "janitorial, plumber, 8810", value: prefill.query || prefill.code || "", required: true })),
-        field("States (optional)", h("input", { name: "states", placeholder: "NV, CA", value: (prefill.states || (prefill.state ? [prefill.state] : [])).join(", ") }))));
-    const build = () => {
-      const q = val(form, "q");
-      const states = splitList(val(form, "states").toUpperCase());
-      return /^\d{3,4}$/.test(q) ? { code: q, states } : { query: q, states };
-    };
-    return { form, build };
-  },
-
-  audit_bill_estimator(prefill) {
-    const lines = h("div", { class: "rows" },
-      h("div", { class: "row row-lines row-head" }, h("span", {}, "Class"), h("span", {}, "Description"), h("span", {}, "Payroll"), h("span", {}, "Rate per $100"), h("span", {})),
-      lineRow());
-    const form = h("form", {},
-      h("div", { class: "form-grid" },
-        field("State", stateSelect("state", prefill.state || "NV")),
-        field("Policy effective date", h("input", { type: "date", name: "date", value: today() }))),
-      lines,
-      h("button", { type: "button", class: "btn btn-ghost btn-small", onclick: () => lines.append(lineRow()) }, "Add class"),
-      h("div", { class: "form-grid mt-md" },
-        field("Experience mod", h("input", { name: "mod", value: "1.00", inputmode: "decimal" })),
-        field("Schedule rating % (credit is negative)", h("input", { name: "sched", value: "0", inputmode: "decimal" })),
-        field("Expense constant $", h("input", { name: "expense", value: "0", inputmode: "decimal" })),
-        field("Other flat charges $", h("input", { name: "other", value: "0", inputmode: "decimal" })),
-        field("Deposit premium paid $ (optional)", h("input", { name: "deposit", inputmode: "decimal" }))));
-    const build = () => {
-      const other = val(form, "other");
-      return {
-        state: val(form, "state"),
-        policyEffectiveDate: val(form, "date"),
-        lines: rowValues(lines).filter((r) => r.get("classCode")).map((r) => ({
-          classCode: r.value("classCode"),
-          ...(r.value("description") ? { description: r.value("description") } : {}),
-          payroll: r.value("payroll"),
-          rate: r.value("rate"),
-        })),
-        experienceMod: val(form, "mod") || "1",
-        scheduleRatingPct: val(form, "sched") || "0",
-        expenseConstant: val(form, "expense") || "0",
-        otherCharges: other && Number(other.replace(/[$,]/g, "")) !== 0 ? [{ label: "Other charges", amount: other }] : [],
-        ...(val(form, "deposit") ? { depositPremium: val(form, "deposit") } : {}),
-      };
-    };
-    return { form, build };
-  },
-
-  officer_payroll(prefill) {
-    const people = h("div", { class: "rows" }, personRow());
-    const limits = h("div", { class: "form-grid", hidden: true },
-      field("State minimum (annual) $", h("input", { name: "min", inputmode: "decimal" })),
-      field("State maximum (annual) $", h("input", { name: "max", inputmode: "decimal" })),
-      field("Owner amount (annual) $", h("input", { name: "owner", inputmode: "decimal" })));
-    const form = h("form", {},
-      h("div", { class: "form-grid" },
-        field("State", stateSelect("state", prefill.state || "NV")),
-        field("Business type", h("select", { name: "entityType" },
-          h("option", { value: "corporation" }, "Corporation"),
-          h("option", { value: "llc" }, "LLC"),
-          h("option", { value: "partnership" }, "Partnership"),
-          h("option", { value: "sole_proprietor" }, "Sole proprietor"))),
-        field("Policy effective date", h("input", { type: "date", name: "date", value: today() })),
-        field("Policy term (days)", h("input", { name: "term", value: "365", inputmode: "numeric" }))),
-      people,
-      h("button", { type: "button", class: "btn btn-ghost btn-small", onclick: () => people.append(personRow()) }, "Add person"),
-      h("label", { class: "check check-spaced" },
-        h("input", { type: "checkbox", name: "useLimits", onchange: (e) => { limits.hidden = !e.target.checked; } }),
-        "I have my state's current limits from the bureau"),
-      limits);
-    const build = () => ({
-      state: val(form, "state"),
-      entityType: val(form, "entityType"),
-      policyEffectiveDate: val(form, "date"),
-      policyTermDays: Number(val(form, "term") || 365),
-      people: rowValues(people).filter((r) => r.get("name")).map((r) => ({
-        name: r.value("name"),
-        actualPayroll: r.value("payroll"),
-        status: r.get("included").checked ? "included" : "excluded",
-      })),
-      ...(checked(form, "useLimits")
-        ? { limitsOverride: { minAnnual: val(form, "min"), maxAnnual: val(form, "max"), ownerAnnual: val(form, "owner") } }
-        : {}),
-    });
-    return { form, build };
-  },
-
-  document_checklist(prefill) {
-    const box = (name, label, on = false) => h("label", { class: "check" }, h("input", { type: "checkbox", name, checked: on }), label);
-    const form = h("form", {},
-      h("div", { class: "form-grid" },
-        field("Main state", stateSelect("state", prefill.state || "", { optional: true })),
-        field("Business type", h("select", { name: "entityType" },
-          h("option", { value: "corporation" }, "Corporation"),
-          h("option", { value: "llc" }, "LLC"),
-          h("option", { value: "partnership" }, "Partnership"),
-          h("option", { value: "sole_proprietor" }, "Sole proprietor"))),
-        field("How is the audit being done?", h("select", { name: "auditType" },
-          h("option", { value: "unknown" }, "Not sure yet"),
-          h("option", { value: "physical" }, "In person"),
-          h("option", { value: "phone_or_mail" }, "By phone or mail"))),
-        field("Class codes on your policy", h("input", { name: "codes", placeholder: "8810, 5183" }))),
-      h("div", { class: "checks" },
-        box("hasOfficersOrOwners", "Officers, members or owners work in the business", true),
-        box("usesSubcontractors", "We hired subcontractors"),
-        box("hasOvertime", "We paid overtime"),
-        box("hasCasualLabor", "We used temporary or casual labor"),
-        box("multiState", "People worked in more than one state")));
-    const build = () => ({
-      ...(val(form, "state") ? { state: val(form, "state") } : {}),
-      entityType: val(form, "entityType"),
-      auditType: val(form, "auditType"),
-      classCodes: splitList(val(form, "codes")),
-      hasOfficersOrOwners: checked(form, "hasOfficersOrOwners"),
-      usesSubcontractors: checked(form, "usesSubcontractors"),
-      hasOvertime: checked(form, "hasOvertime"),
-      hasCasualLabor: checked(form, "hasCasualLabor"),
-      multiState: checked(form, "multiState"),
-    });
-    return { form, build };
-  },
-};
-
-function openTool(name, prefill) {
-  if (!FORMS[name]) return;
-  for (const [n, card] of Object.entries(cards)) card.setAttribute("aria-expanded", String(n === name));
-  const { form, build } = FORMS[name](prefill);
-  const error = h("p", { class: "form-error", role: "alert" });
-  const results = h("div");
-  const submit = h("button", { type: "submit", class: "btn btn-primary" }, "Run");
-  form.append(h("div", { class: "form-actions" }, submit), error);
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    error.textContent = "";
-    submit.disabled = true;
-    try {
-      const { receipt } = await api(`/api/tools/${name}`, build());
-      results.prepend(resultCard(receipt));
-    } catch (err) {
-      error.textContent = err.message;
-    } finally {
-      submit.disabled = false;
+  function summarize(receipt) {
+    var o = receipt.output;
+    switch (receipt.tool) {
+      case "class_code_lookup": {
+        if (o.comparison && o.comparison.byState.length) {
+          return "Class " + o.comparison.code + " by state:\n\n" + o.comparison.byState.map(function (s) {
+            var what = s.found ? s.title
+              : s.equivalent ? "not used here; closest code is " + s.equivalent.code + (s.equivalent.title ? " · " + s.equivalent.title : "") + ". " + s.equivalent.note
+              : s.note || "not found";
+            return s.stateName + " (" + s.bureau + "): " + what;
+          }).join("\n") + warningsText(o.notes);
+        }
+        if (o.matches.length) {
+          return (o.mode === "compare" ? "" : "Closest matches:\n\n") + o.matches.map(function (m) {
+            return m.code + " · " + m.title + " (" + m.system + ")";
+          }).join("\n") + warningsText(o.notes);
+        }
+        return o.notes.join("\n") || "No match in Penny's tables yet.";
+      }
+      case "audit_bill_estimator": {
+        var lines = [];
+        if (o.comparison) {
+          lines.push("Estimated premium: " + o.comparison.depositPremium.display);
+          lines.push("Audited premium: " + o.totalAuditPremium.display);
+          lines.push(
+            o.comparison.result === "no change" ? "No change from the estimate."
+              : (o.comparison.result === "additional premium" ? "Additional premium due: " : "Return premium: ") + o.comparison.difference.display,
+          );
+        } else {
+          lines.push("Audited premium: " + o.totalAuditPremium.display);
+        }
+        lines.push("", "How it adds up:");
+        o.steps.forEach(function (s) { lines.push(s.label + ": " + s.amount.display + " (" + s.detail + ")"); });
+        o.drivers.forEach(function (d) { lines.push("", "Each extra $10,000 of payroll in class " + d.classCode + " changes the bill by " + d.per10kPayroll.display + "."); });
+        lines.push("", "This leaves out fees, taxes and minimum premiums, which vary by carrier. If your bill does not match, Audit Review checks it line by line.");
+        return lines.join("\n") + warningsText(o.warnings);
+      }
+      case "officer_payroll": {
+        var p = o.people[0];
+        var text = "Payroll counted on the audit: " + o.totalCountedPayroll.display + "\n" + p.reason;
+        if (o.limits.minimum) {
+          text += "\n\nLimits used for a " + o.limits.proratedFor + ": minimum " + o.limits.minimum.display + ", maximum " + o.limits.maximum.display +
+            ", owner amount " + o.limits.ownerAmount.display + ".";
+        }
+        return text + warningsText(o.warnings);
+      }
+      case "document_checklist": {
+        var n = 0;
+        var out = "Here is your audit checklist:\n";
+        o.groups.forEach(function (g) {
+          out += "\n" + g.group + "\n";
+          g.items.forEach(function (i) { n++; out += n + ". " + i.label + (i.priority === "recommended" ? " (recommended)" : "") + "\n"; });
+        });
+        return out + "\n" + o.tips.join("\n");
+      }
     }
-  });
-  panel.replaceChildren(h("h3", {}, TOOL_INFO[name].title), form, results);
-  panel.hidden = false;
-  panel.scrollIntoView({ behavior: "smooth", block: "start" });
-}
+    return "Done.";
+  }
+
+  // ---------- guided flows ----------
+
+  var FLOWS = {
+    estimate: {
+      placeholder: "Type your answer",
+      first: "Let's estimate it. Which state is the policy in? For example: NV",
+      steps: [
+        { key: "state", parse: parseState, retry: "I need a state, like NV or Nevada.", next: "Which class code is this for? For example: 8810" },
+        { key: "classCode", parse: function (t) { return /^\d{3,4}$/.test(t.trim()) ? t.trim() : null; }, retry: "I need a 3 or 4 digit class code, like 8810.", next: "What payroll did your policy estimate for this class? For example: 160000" },
+        { key: "est", parse: num, retry: "I need a number for that one. For example: 160000", next: "What did you actually pay in payroll for the policy period?" },
+        { key: "act", parse: num, retry: "I need a number for that one. For example: 185000", next: "What is the rate per $100 of payroll on your policy? For example: 2.75" },
+        { key: "rate", parse: num, retry: "I need a number for that one. For example: 2.75", next: "What is your experience mod? Type 1 if you do not have one." },
+        { key: "mod", parse: num, retry: "I need a number for that one. For example: 0.95" },
+      ],
+      async finish(a) {
+        var base = { state: a.state, experienceMod: a.mod };
+        var estimated = await runTool("audit_bill_estimator", Object.assign({}, base, { lines: [{ classCode: a.classCode, payroll: a.est, rate: a.rate }] }));
+        var audited = await runTool("audit_bill_estimator", Object.assign({}, base, {
+          lines: [{ classCode: a.classCode, payroll: a.act, rate: a.rate }],
+          depositPremium: (estimated.output.totalAuditPremium.cents / 100).toFixed(2),
+        }));
+        return answer(summarize(audited), [audited]);
+      },
+    },
+
+    officer: {
+      placeholder: "Type your answer",
+      first: "Which state is the policy in? For example: NV",
+      steps: [
+        { key: "state", parse: parseState, retry: "I need a state, like NV or Nevada.", next: "What type of business is it? Type corporation, LLC, partnership, or sole proprietor." },
+        {
+          key: "entityType",
+          parse: function (t) {
+            var l = t.toLowerCase();
+            return /llc/.test(l) ? "llc" : /corp|inc/.test(l) ? "corporation" : /partner/.test(l) ? "partnership" : /sole|proprietor/.test(l) ? "sole_proprietor" : null;
+          },
+          retry: "Type corporation, LLC, partnership, or sole proprietor.",
+          next: "Is the owner or officer included or excluded on your policy? Type included, excluded, or not sure.",
+        },
+        {
+          key: "status",
+          parse: function (t) { var l = t.toLowerCase().trim(); return l.indexOf("ex") === 0 ? "excluded" : l.indexOf("in") === 0 ? "included" : l.indexOf("not") === 0 || l.indexOf("?") >= 0 ? "unsure" : null; },
+          retry: "Type included, excluded, or not sure.",
+          next: function (a) {
+            if (a.status === "unsure") return null;
+            return a.status === "excluded" ? null : "What did they actually receive in pay for the policy period? For example: 40000";
+          },
+        },
+        { key: "pay", parse: num, retry: "I need a number for that one. For example: 40000" },
+      ],
+      async finish(a) {
+        if (a.status === "unsure") {
+          return "Look for an officer or owner exclusion endorsement in your policy forms. If it is there, their pay is left out; if not, it is usually counted within your state's minimum and maximum. Ask me again once you know, and I'll work out the number.";
+        }
+        var receipt = await runTool("officer_payroll", {
+          state: a.state,
+          entityType: a.entityType,
+          people: [{ name: "Owner or officer", actualPayroll: a.pay || "0", status: a.status }],
+        });
+        var extra = a.status === "excluded" ? "\n\nMake sure the exclusion endorsement is actually on your policy. Without it, their pay can be added at audit." : "";
+        return answer(summarize(receipt) + extra, [receipt]);
+      },
+    },
+
+    checklist: {
+      placeholder: "Type your answer",
+      first: "What type of business are you? Type LLC, corporation, sole proprietor, or partnership.",
+      steps: [
+        {
+          key: "entityType",
+          parse: function (t) {
+            var l = t.toLowerCase();
+            return /llc/.test(l) ? "llc" : /corp|inc/.test(l) ? "corporation" : /partner/.test(l) ? "partnership" : /sole|proprietor/.test(l) ? "sole_proprietor" : null;
+          },
+          retry: "Type LLC, corporation, sole proprietor, or partnership.",
+          next: "Did you pay any subcontractors or 1099 workers during the policy period? Yes or no.",
+        },
+        { key: "subs", parse: function (t) { return /^\s*[yn]/i.test(t) ? yes(t) : null; }, retry: "Yes or no?", next: "Did any employees work in more than one state? Yes or no." },
+        { key: "multi", parse: function (t) { return /^\s*[yn]/i.test(t) ? yes(t) : null; }, retry: "Yes or no?", next: "Did you pay any overtime? Yes or no." },
+        { key: "overtime", parse: function (t) { return /^\s*[yn]/i.test(t) ? yes(t) : null; }, retry: "Yes or no?" },
+      ],
+      async finish(a) {
+        var receipt = await runTool("document_checklist", {
+          entityType: a.entityType,
+          usesSubcontractors: a.subs,
+          multiState: a.multi,
+          hasOvertime: a.overtime,
+        });
+        return answer(summarize(receipt), [receipt]);
+      },
+    },
+
+    lookup: {
+      placeholder: "A job or a code, like roofer or 8810",
+      first: 'Type a job, like "roofer" or "office staff", or a code like 8810. Add states to compare them, like "8810 in NV and CA".',
+    },
+  };
+
+  function setPlaceholder() {
+    input.placeholder = (S.flow && FLOWS[S.flow].placeholder) || "Ask Penny about your audit";
+  }
+
+  function startFlow(flow, userText) {
+    if (busy) return;
+    add("user", userText);
+    S = { flow: flow, step: 0, ans: {} };
+    setPlaceholder();
+    pennySays(FLOWS[flow].first, 450);
+  }
+
+  function endFlow() {
+    S = { flow: null, step: 0, ans: {} };
+    setPlaceholder();
+  }
+
+  async function lookup(text) {
+    var codes = text.match(/\b\d{4}\b/g) || [];
+    var states = statesIn(text);
+    var receipts = codes.length
+      ? await Promise.all(codes.slice(0, 3).map(function (c) { return runTool("class_code_lookup", { code: c, states: states }); }))
+      : [await runTool("class_code_lookup", {
+          query: text.toLowerCase().replace(/\b(compare|class|code|codes|for|in|and|the|a|an|my|staff|employees?)\b/g, " ").replace(/\b[a-z]{2}\b/g, function (w) { return STATES[w.toUpperCase()] ? " " : w; }).replace(/\s+/g, " ").trim() || text,
+          states: states,
+        })];
+    var text2 = receipts.map(summarize).join("\n\n");
+    if (codes.length >= 2) text2 += "\n\nThe deciding question is usually what the employee actually does day to day.";
+    return answer(text2, receipts);
+  }
+
+  async function freeChat(text) {
+    history.push({ role: "user", content: text });
+    var data = await api("/api/chat", { messages: history.slice(-20) });
+    history.push({ role: "assistant", content: data.reply });
+    setChips(data.suggestions && data.suggestions.length ? data.suggestions : null);
+    var map = { audit_bill_estimator: "estimate", officer_payroll: "officer", document_checklist: "checklist" };
+    if (data.openTool && map[data.openTool.tool]) {
+      var flow = map[data.openTool.tool];
+      S = { flow: flow, step: 0, ans: {} };
+      setPlaceholder();
+      return answer(data.reply + "\n\n" + FLOWS[flow].first);
+    }
+    if (data.demo || data.signup) {
+      // Show the reply now; the demo or sign-up card follows as its own message.
+      setTimeout(function () {
+        if (data.demo) playDemo(data.demo);
+        if (data.signup) showSignup(data.signup.interest);
+      }, 50);
+      return answer(data.reply);
+    }
+    var body = data.receipts && data.receipts.length && data.mode === "rules" ? data.receipts.map(summarize).join("\n\n") : data.reply;
+    return answer(body, data.receipts);
+  }
+
+  // ---------- sign-up ----------
+
+  var ROLE_OPTIONS = [["business", "A business being audited"], ["auditor", "A premium auditor"], ["agency_or_partner", "An agency, bookkeeper or partner"], ["insurer", "An insurer or audit firm"], ["other", "Something else"]];
+  var INTEREST_OPTIONS = [["free_account", "Free account"], ["pro", "Pro"], ["max", "Max"], ["team", "Team"], ["audit_ready", "Audit Ready"], ["audit_review", "Audit Review"], ["partner", "Partner plans"], ["insurer_demo", "Insurer walkthrough"], ["other", "Just talk to the team"]];
+
+  function select(name, options, value) {
+    var sel = el("select");
+    sel.name = name;
+    options.forEach(function (o) { var opt = el("option", "", o[1]); opt.value = o[0]; if (o[0] === value) opt.selected = true; sel.appendChild(opt); });
+    return sel;
+  }
+
+  function labeled(text, control) {
+    var l = el("label", "field");
+    l.appendChild(el("span", "", text));
+    l.appendChild(control);
+    return l;
+  }
+
+  function textInput(name, type, required, autocomplete) {
+    var i = el("input");
+    i.name = name; i.type = type; i.required = required;
+    if (autocomplete) i.autocomplete = autocomplete;
+    return i;
+  }
+
+  function showSignup(interest) {
+    var form = el("form", "signup");
+    form.appendChild(el("strong", "", "Early access"));
+    form.appendChild(labeled("Name", textInput("name", "text", true, "name")));
+    form.appendChild(labeled("Email", textInput("email", "email", true, "email")));
+    form.appendChild(labeled("I am", select("role", ROLE_OPTIONS, interest === "insurer_demo" ? "insurer" : interest === "partner" ? "agency_or_partner" : /pro|max|team/.test(interest) ? "auditor" : "business")));
+    form.appendChild(labeled("Interested in", select("interest", INTEREST_OPTIONS, interest)));
+    form.appendChild(labeled("Company (optional)", textInput("company", "text", false, "organization")));
+    var consent = el("label", "check");
+    var box = el("input"); box.type = "checkbox"; box.name = "consent"; box.required = true;
+    consent.appendChild(box);
+    consent.appendChild(document.createTextNode(" It's OK for the Propono team to contact me about Penny."));
+    form.appendChild(consent);
+    var err = el("span", "small signup-error");
+    var submit = el("button", "btn", "Sign me up");
+    submit.type = "submit";
+    form.appendChild(submit);
+    form.appendChild(err);
+    form.addEventListener("submit", async function (e) {
+      e.preventDefault();
+      err.textContent = "";
+      submit.disabled = true;
+      var f = form.elements;
+      try {
+        await api("/api/leads", {
+          name: f.namedItem("name").value, email: f.namedItem("email").value, role: f.namedItem("role").value,
+          interest: f.namedItem("interest").value, company: f.namedItem("company").value, consent: f.namedItem("consent").checked,
+        });
+        form.replaceChildren(el("strong", "", "You're on the list."), el("span", "", "The Propono team will reach out personally. In the meantime, the free tools are all yours."));
+        setChips(null);
+      } catch (ex) {
+        err.textContent = ex.message;
+        submit.disabled = false;
+      }
+    });
+    add("penny", form);
+  }
+
+  // ---------- demos ----------
+  // Sample businesses and demo rates; every dollar figure comes from the engine.
+
+  function lineList(out) {
+    return out.lines.map(function (l) { return l.classCode + (l.description ? " " + l.description : "") + ": " + l.payroll.display + " payroll × " + l.rate + " = " + l.premium.display; }).join("\n");
+  }
+
+  var DEMOS = {
+    audit_review: function () {
+      var base = { state: "NV", policyEffectiveDate: "2026-01-01", experienceMod: "1.04", expenseConstant: "250" };
+      var billed = [
+        { classCode: "5551", description: "Roofing", payroll: "460000", rate: "9.85" },
+        { classCode: "5606", description: "Supervisors", payroll: "85000", rate: "1.95" },
+        { classCode: "8810", description: "Clerical", payroll: "64000", rate: "0.31" },
+      ];
+      var corrected = billed.map(function (l) { return l.classCode === "5551" ? Object.assign({}, l, { payroll: "412000" }) : l; });
+      var A, B, C;
+      return {
+        title: "Audit Review · Sierra Ridge Roofing LLC (sample)",
+        steps: [
+          { title: "Open your audit", async body() {
+            A = await runTool("audit_bill_estimator", Object.assign({}, base, { lines: billed, depositPremium: "45000" }));
+            var o = A.output;
+            return ["Here is the audit the carrier sent, line by line:\n\n" + lineList(o) + "\n\nAudited premium " + o.totalAuditPremium.display + " against " + o.comparison.depositPremium.display + " already paid: " + o.comparison.difference.display + " " + o.comparison.result + " due.", A];
+          } },
+          { title: "Penny explains it", async body() {
+            var d = A.output.drivers.find(function (x) { return x.classCode === "5551"; });
+            return ["The roofing line includes $48,000 paid to two subcontractors: Ridgeline Gutters ($30,000) and Basin Sheet Metal ($18,000). No certificates of insurance were on file for the dates they worked, so their payments were added to your roofing payroll. That's the usual rule for uninsured subcontractors.\n\nWhat would change it: certificates showing their workers' comp was in force. Each $10,000 in class 5551 is " + d.per10kPayroll.display + " on this bill."];
+          } },
+          { title: "Add what's missing", action: "Upload both certificates", async body() {
+            B = await runTool("audit_bill_estimator", Object.assign({}, base, { lines: corrected, depositPremium: (A.output.totalAuditPremium.cents / 100).toFixed(2) }));
+            return ["Both certificates check out for the work dates. With the $48,000 removed from class 5551, the audit drops by " + B.output.comparison.difference.display + " to " + B.output.totalAuditPremium.display + ".", B];
+          } },
+          { title: "Escalate if needed", action: "Auditor approves", async body() {
+            return ["The auditor sees only the disputed line, with both certificates attached and Penny's assessment. No re-audit from scratch. In this demo, the auditor approves."];
+          } },
+          { title: "Revised automatically", async body() {
+            C = await runTool("audit_bill_estimator", Object.assign({}, base, { lines: corrected, depositPremium: "45000" }));
+            var o = C.output;
+            return ["The approved change regenerates the audit and the bill: " + o.totalAuditPremium.display + " audited, " + o.comparison.difference.display + " " + o.comparison.result + " against the deposit. Press Verify to re-run it and confirm the same answer.\n\nThe carrier's auditor makes the final decision, and you keep every appeal right your state provides.", C];
+          } },
+        ],
+        cta: ["Sign up for Audit Review", "Plans and pricing"],
+      };
+    },
+
+    audit_ready: function () {
+      var R, F;
+      return {
+        title: "Audit Ready · Coyote Creek Landscaping LLC (sample)",
+        steps: [
+          { title: "Your checklist", async body() {
+            R = await runTool("document_checklist", { entityType: "llc", usesSubcontractors: true, hasOvertime: true, multiState: false, classCodes: ["0042", "8810"], auditType: "phone_or_mail", policyEffectiveDate: "2026-01-01" });
+            var items = []; R.output.groups.forEach(function (g) { g.items.forEach(function (i) { items.push(i.label); }); });
+            var have = 4;
+            return ["Penny built this list from your answers. You've uploaded " + have + " of " + items.length + ":\n\n" + items.map(function (x, i) { return (i < have ? "✓ " : "○ ") + x; }).join("\n"), R];
+          } },
+          { title: "Penny flags issues before the auditor does", async body() {
+            F = await runTool("audit_bill_estimator", { state: "NV", policyEffectiveDate: "2026-01-01", lines: [{ classCode: "0042", description: "Landscaping", payroll: "14500", rate: "5.12" }] });
+            return ["One subcontractor, Desert Edge Irrigation, was paid $14,500 with no certificate on file. Without one, that payment can be added to your landscaping payroll: about " + F.output.totalAuditPremium.display + " in premium at your rate. Upload their certificate now.\n\nYour payroll register shows overtime. Send the overtime breakdown so the premium portion can be left out where your state allows.", F];
+          } },
+          { title: "Packaged for the auditor", async body() {
+            return ["When everything is in, Penny packages one file indexed by checklist item, with a cover summary of payroll by class, officers and subcontractors. You send it, or your agent does."];
+          } },
+        ],
+        cta: ["Sign up for Audit Ready", "Plans and pricing"],
+      };
+    },
+
+    auditor_pro: function () {
+      var W;
+      return {
+        title: "Penny Pro · Basin Electric Inc. audit (sample)",
+        steps: [
+          { title: "Forward the documents", async body() {
+            return ["The insured's documents arrive at your Penny intake address: four quarterly 941s, a payroll register for 14 employees, the general ledger and three subcontractor certificates. Penny reads and files each one."];
+          } },
+          { title: "Reconcile", async body() {
+            return ["Payroll register total: $1,182,400. Wages on the four 941s: $1,182,400. They match, so the register can be relied on.\n\n(Illustration: the signed-in 941 check arrives with Pro.)"];
+          } },
+          { title: "Drafted worksheet", async body() {
+            W = await runTool("audit_bill_estimator", { state: "NV", policyEffectiveDate: "2026-01-01", experienceMod: "0.91", lines: [
+              { classCode: "5190", description: "Electricians", payroll: "968000", rate: "5.48" },
+              { classCode: "8810", description: "Office", payroll: "142400", rate: "0.29" },
+              { classCode: "8742", description: "Outside sales", payroll: "72000", rate: "0.62" },
+            ] });
+            return ["Penny drafts the worksheet with payroll split by class. Each line ties to the register rows and the job duties behind it:\n\n" + lineList(W.output) + "\n\nAudited premium: " + W.output.totalAuditPremium.display + " after the 0.91 mod. All three subcontractors had valid certificates, so nothing was added.", W];
+          } },
+          { title: "You decide", async body() {
+            return ["You review, edit any line, and sign off. Your decision is final; Penny keeps the record of every source and change."];
+          } },
+        ],
+        cta: ["Sign up for Pro", "Plans and pricing"],
+      };
+    },
+  };
+
+  function playDemo(id) {
+    if (!DEMOS[id]) return;
+    var demo = DEMOS[id]();
+    var card = el("div", "demo");
+    var head = el("div", "demo-head");
+    head.appendChild(el("span", "kicker", "Demo · sample data"));
+    head.appendChild(el("strong", "", demo.title));
+    var progress = el("span", "small muted");
+    head.appendChild(progress);
+    var body = el("div", "demo-body");
+    var nav = el("div", "demo-nav");
+    card.appendChild(head); card.appendChild(body); card.appendChild(nav);
+    add("penny", card);
+    var i = 0;
+
+    async function show() {
+      var step = demo.steps[i];
+      progress.textContent = "Step " + (i + 1) + " of " + demo.steps.length + ": " + step.title;
+      body.replaceChildren(el("span", "small muted", "Working..."));
+      nav.replaceChildren();
+      try {
+        var result = await step.body();
+        body.replaceChildren(answer(result[0], result[1] ? [result[1]] : []));
+      } catch (err) {
+        body.replaceChildren(el("span", "", "The demo hit a problem: " + err.message));
+      }
+      var next = demo.steps[i + 1];
+      if (next) {
+        var b = el("button", "btn", next.action || "Next: " + next.title);
+        b.type = "button";
+        b.onclick = function () { i++; show(); };
+        nav.appendChild(b);
+      } else {
+        nav.appendChild(el("span", "small muted", "That's the demo."));
+        setChips(demo.cta);
+      }
+      chat.scrollTop = chat.scrollHeight;
+    }
+    show();
+  }
+
+  function handle(raw) {
+    var t = raw.trim();
+    if (!t || busy) return;
+    input.value = "";
+
+    if (S.flow === "lookup") {
+      add("user", t);
+      return pennyWorks(function () { return lookup(t); });
+    }
+
+    if (S.flow) {
+      var flow = FLOWS[S.flow];
+      var step = flow.steps[S.step];
+      add("user", t);
+      var v = step.parse(t);
+      if (v === null) {
+        if (/\?|\b(price|pricing|plans?|demo|sign|cost|what|how|who|why)\b/i.test(t)) {
+          endFlow();
+          return pennyWorks(function () { return freeChat(t); });
+        }
+        pennySays(step.retry);
+        return;
+      }
+      S.ans[step.key] = v;
+      var next = typeof step.next === "function" ? step.next(S.ans) : step.next;
+      if (next && S.step < flow.steps.length - 1) { S.step++; pennySays(next); return; }
+      var answers = S.ans;
+      var finish = flow.finish;
+      endFlow();
+      return pennyWorks(function () { return finish(answers); });
+    }
+
+    var low = t.toLowerCase();
+    if (/\b\d{4}\b/.test(t) && !/\$|payroll|premium|bill/.test(low)) {
+      add("user", t);
+      S = { flow: "lookup", step: 0, ans: {} };
+      setPlaceholder();
+      return pennyWorks(function () { return lookup(t); });
+    }
+    add("user", t);
+    return pennyWorks(function () { return freeChat(t); });
+  }
+
+  var FLOW_CHIPS = { "Look up a class code": "lookup", "Estimate my audit bill": "estimate", "Officer payroll rules": "officer", "What documents do I need?": "checklist" };
+  var DEFAULT_CHIPS = ["Look up a class code", "Estimate my audit bill", "Officer payroll rules", "What documents do I need?", "Watch a demo", "Plans and pricing"];
+
+  function chipClick(label) {
+    if (FLOW_CHIPS[label]) return startFlow(FLOW_CHIPS[label], label);
+    if (busy) return;
+    endFlow();
+    add("user", label);
+    pennyWorks(function () { return freeChat(label); });
+  }
+
+  /** Show follow-up suggestions, or the default chips when given null. */
+  function setChips(labels) {
+    chipsEl.replaceChildren();
+    (labels || DEFAULT_CHIPS).forEach(function (label) {
+      var b = el("button", "chip", label);
+      b.type = "button";
+      b.onclick = function () { chipClick(label); };
+      chipsEl.appendChild(b);
+    });
+  }
+
+  function reset() {
+    chat.replaceChildren();
+    setChips(null);
+    history = [];
+    endFlow();
+    pennySays(GREETING, 700);
+  }
+
+  document.getElementById("reset").onclick = reset;
+  sendBtn.onclick = function () { handle(input.value); };
+  input.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); handle(input.value); } });
+  reset();
+})();

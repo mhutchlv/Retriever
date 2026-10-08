@@ -2,11 +2,14 @@ import assert from "node:assert/strict";
 import type { AddressInfo } from "node:net";
 import { after, before, describe, it } from "node:test";
 import { detectStates, routeMessage } from "../src/chat/router.ts";
+import { MemoryLeadSink } from "../src/leads/store.ts";
 import { MemoryRunLog } from "../src/runlog/store.ts";
-import { createApp } from "../src/server/app.ts";
+import type { IncomingMessage } from "node:http";
+import { clientKey, createApp } from "../src/server/app.ts";
 
 const runLog = new MemoryRunLog();
-const app = createApp({ runLog, useModel: false });
+const leads = new MemoryLeadSink();
+const app = createApp({ runLog, leads, useModel: false });
 let base = "";
 
 before(async () => {
@@ -66,6 +69,16 @@ describe("http api", () => {
     assert.deepEqual(body.receipts[0].input.states, ["CA", "NV"]);
   });
 
+  it("returns sales actions from chat and accepts sign-ups", async () => {
+    const chat = await (await post("/api/chat", { messages: [{ role: "user", content: "sign me up for Pro" }] })).json();
+    assert.deepEqual(chat.signup, { interest: "pro" });
+    const ok = await post("/api/leads", { name: "Pat", email: "pat@example.com", role: "auditor", interest: "pro", consent: true });
+    assert.equal(ok.status, 200);
+    assert.equal(leads.leads.length, 1);
+    const bad = await post("/api/leads", { name: "Pat", email: "pat@example.com" });
+    assert.equal(bad.status, 400);
+  });
+
   it("validates chat history", async () => {
     const res = await post("/api/chat", { messages: [{ role: "assistant", content: "hi" }] });
     assert.equal(res.status, 400);
@@ -98,5 +111,19 @@ describe("rules router", () => {
     const reply = routeMessage("what class code for janitorial in CA", "public");
     assert.equal(reply.runs.length, 1);
     assert.deepEqual(reply.runs[0]!.input, { policyEffectiveDate: reply.runs[0]!.input.policyEffectiveDate, query: "janitorial", states: ["CA"] });
+  });
+});
+
+describe("client address", () => {
+  const req = (xff: string | undefined) =>
+    ({ headers: xff === undefined ? {} : { "x-forwarded-for": xff }, socket: { remoteAddress: "10.0.0.9" } }) as unknown as IncomingMessage;
+
+  it("uses the proxy-appended address when behind a trusted proxy", () => {
+    assert.equal(clientKey(req("6.6.6.6, 203.0.113.7"), true), "203.0.113.7");
+    assert.equal(clientKey(req(undefined), true), "10.0.0.9");
+  });
+
+  it("ignores the header when not behind a proxy", () => {
+    assert.equal(clientKey(req("6.6.6.6"), false), "10.0.0.9");
   });
 });

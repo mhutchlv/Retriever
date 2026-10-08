@@ -1,0 +1,59 @@
+# Deploying Penny to Azure
+
+Penny runs the same way Statement360's API does: a container image built in Azure Container Registry, served by Azure Container Apps. It goes in its **own resource group** (`rg-penny`) so its billing, access and SOC 2 scope stay separate from Statement Insurance's systems.
+
+## What gets created
+
+| Resource | Name (default) | Why |
+| --- | --- | --- |
+| Resource group | `rg-penny` | Everything Penny owns, nothing else |
+| Container image | `<registry>/penny:<sha>-<time>` | Built in the registry with `az acr build` (no local Docker) |
+| Container Apps environment | `penny-env` | Consumption plan: no charge while idle |
+| Container App | `penny-web` | HTTPS ingress, scales 0 to 1 replica |
+| Storage account + file share | `pennydata<hash>` / `penny-data` | Run log (`runs.jsonl`) and sign-ups (`leads.jsonl`), mounted at `/data` |
+| Managed identity | `id-penny-web` | Pulls the image (AcrPull); no registry password stored |
+
+Secrets (`ANTHROPIC_API_KEY`, `PENNY_LEAD_WEBHOOK`) are stored as Container App secrets.
+
+## Deploy
+
+From the repo root, on a machine with `az login` done:
+
+```bash
+# Preview every command and the generated app spec, changing nothing:
+DRY_RUN=1 ACR_NAME=<registry> ./deploy/azure/deploy.sh
+
+# Deploy (re-run the same command to ship an update):
+ACR_NAME=<registry> \
+ANTHROPIC_API_KEY=<key> \
+PENNY_LEAD_WEBHOOK=<teams or power automate url> \
+ALLOWED_IPS="<office ip>/32" \
+./deploy/azure/deploy.sh
+```
+
+- `ACR_NAME`: reuse ST360's registry (`cad945086da7acr`) or create one for Propono (see the decision below).
+- `ALLOWED_IPS`: leave it set while the reference tables are sample data, so only the team can reach the site. Remove it to go public.
+- Without `ANTHROPIC_API_KEY` the chat uses its built-in keyword answers; tools, demos and sign-up all still work.
+- `PENNY_LEAD_WEBHOOK` posts each sign-up as JSON, the same pattern as ST360's Teams e-sign notifications. Sign-ups are also written to `leads.jsonl` on the share.
+
+The script prints the live URL and checks `/api/health` at the end.
+
+## Custom domain
+
+After the first deploy:
+
+```bash
+az containerapp hostname add -n penny-web -g rg-penny --hostname penny.<domain>
+# Add the CNAME and TXT (asuid) records it asks for at the DNS host, then:
+az containerapp hostname bind -n penny-web -g rg-penny --hostname penny.<domain> --environment penny-env --validation-method CNAME
+```
+
+## Decision before the first deploy: which subscription
+
+Propono is a separate company from Statement Insurance. Putting Penny in Statement Insurance's Azure subscription would put Propono's product, data and SOC 2 scope in another company's account. Recommended: a **Propono-owned subscription** (it can sit in the same Azure tenant under its own billing), with its own registry. The script works either way; only `ACR_NAME` and the active `az account` change.
+
+## Limits of this setup
+
+- One replica, because the run log is a single file. Before scaling out, move the run log and sign-ups to Postgres behind the same interfaces (`RunLog`, `LeadSink`).
+- The rate limiter is in memory, which is fine for one replica.
+- No Log Analytics workspace is attached, so check logs with `az containerapp logs show -n penny-web -g rg-penny`.

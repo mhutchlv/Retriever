@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Data security at Penny and Propono</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&amp;family=IBM+Plex+Mono:wght@500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="penny.css">
+<style>
+.hero{background:#fff;border-bottom:1px solid var(--line);padding:64px 0 72px}
+.hero .wrap{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:40px;align-items:center}
+.hero .copy{display:flex;flex-direction:column;gap:18px}
+.seal{display:flex;flex-direction:column;gap:16px;background:var(--ink);color:#fff;border-radius:20px;padding:28px}
+.seal h3{color:#fff}
+.seal p{color:#D6D3CD;font-size:15px}
+.seal .row{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #3A414C;font-size:15px}
+.seal .row:last-child{border-bottom:none}
+.seal .row b{font-family:'IBM Plex Mono',monospace;font-weight:500;color:var(--cu-light)}
+/* accordion */
+.acc{display:flex;flex-direction:column;gap:12px}
+.acc details{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.acc summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:20px 24px;font-weight:600;font-size:17px}
+.acc summary::-webkit-details-marker{display:none}
+.acc summary .k{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--cu);font-weight:500;margin-right:12px}
+.acc summary .plus{width:28px;height:28px;border:1px solid var(--line);border-radius:50%;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;transition:transform .3s var(--ease),background .3s}
+.acc details[open] summary .plus{transform:rotate(45deg);background:var(--cu-tint);border-color:var(--cu-light)}
+.acc .body{padding:0 24px 22px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px}
+.acc .body h4{margin-bottom:6px}
+.acc .body p,.acc .body li{font-size:15px;color:var(--body)}
+.acc .body ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+/* flow diagram */
+#dataflow .wall{stroke-dasharray:6 6}
+#dataflow .lock{transition:transform .4s var(--ease)}
+/* lifecycle */
+.life{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:#fff}
+.life>div{padding:24px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+.life>div:last-child{border-right:none}
+.life .n{font-family:'IBM Plex Mono',monospace;color:var(--cu);font-size:13px}
+.life strong{font-size:17px}
+.life span{font-size:14.5px;color:var(--body)}
+.two-col{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px}
+.list{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px;font-size:15px;color:var(--body)}
+.faq details{border-bottom:1px solid var(--line);padding:16px 0}
+.faq summary{cursor:pointer;font-weight:600;font-size:16px;list-style:none;display:flex;justify-content:space-between;gap:12px}
+.faq summary::-webkit-details-marker{display:none}
+.faq p{margin-top:10px;font-size:15px;color:var(--body);max-width:72ch}
+.cta .wrap{display:flex;flex-wrap:wrap;gap:24px;align-items:center;justify-content:space-between}
+</style>
+</head>
+<body>
+<header class="site">
+<div class="wrap">
+<a class="brand" href="index.html">
+<svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="15" fill="none" stroke="#A9481F" stroke-width="2.5"/><circle cx="17" cy="17" r="10" fill="none" stroke="#A9481F" stroke-width="1.2"/><path d="M14 23V11h4.2a3.4 3.4 0 0 1 0 6.8H14" fill="none" stroke="#A9481F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<b>Penny</b><small>by Propono</small>
+</a>
+<nav class="main" aria-label="Main">
+<a href="index.html#tools">Free tools</a>
+<a href="index.html#review">Audit Review</a>
+<a href="insurers.html">For insurers</a>
+<a href="research.html">Research</a>
+<a href="security.html" aria-current="page">Security</a>
+<a href="index.html#pricing">Pricing</a>
+</nav>
+<a class="btn" href="#report">Request the SOC 2 report</a>
+</div>
+</header>
+
+<main>
+<section class="hero">
+<div class="wrap">
+<div class="copy">
+<span class="kicker">Data security</span>
+<h1>Your payroll is sensitive. We treat it that way.</h1>
+<p class="lede">Penny and the Propono platform handle some of the most sensitive records a business has: payroll, tax filings and who works where. This page explains what SOC 2 Type II means, how we protect data for businesses, their employees and insurers, and what you can ask us for.</p>
+<div style="display:flex;flex-wrap:wrap;gap:12px">
+<a class="btn" href="#soc2">What SOC 2 means</a>
+<a class="btn ghost" href="#how">How we protect data</a>
+</div>
+</div>
+<div class="seal" aria-label="Security at a glance">
+<h3>At a glance</h3>
+<div class="row"><span>Independent audit</span><b>SOC 2 Type II</b></div>
+<div class="row"><span>Encryption</span><b>In transit and at rest</b></div>
+<div class="row"><span>Carrier data</span><b>Isolated per carrier</b></div>
+<div class="row"><span>AI providers</span><b>No training on your data</b></div>
+<div class="row"><span>Every action</span><b>Logged and reproducible</b></div>
+<div class="row"><span>Access</span><b>Least privilege, MFA</b></div>
+</div>
+</div>
+</section>
+
+<section id="soc2">
+<div class="wrap">
+<div class="head">
+<span class="kicker">SOC 2, explained</span>
+<h2>What "SOC 2 Type II certified" actually means.</h2>
+<p class="lede">SOC 2 is an independent audit of a service company's controls, defined by the American Institute of CPAs. A licensed CPA firm examines how we protect customer data and issues a report. It is the standard insurers and their procurement teams ask for before sharing data with a vendor.</p>
+</div>
+<div class="two-col" style="margin-bottom:28px">
+<div class="card"><h3>Type I vs. Type II</h3><p>A Type I report checks that controls are designed properly on a single day. A Type II report, which we hold, checks that the controls actually operated effectively over a period of months. The auditor tests evidence from that whole period, not a snapshot.</p></div>
+<div class="card tint"><h3>Why it matters to you</h3><p>You do not have to take our word for it. An independent auditor tested how we handle access, encryption, monitoring, vendors and incidents, and wrote down what they found. Carriers and partners can read that report under NDA.</p></div>
+</div>
+<p style="font-weight:600;margin-bottom:12px">The five Trust Services Criteria an auditor examines</p>
+<div class="acc">
+<details open>
+<summary><span><span class="k">01</span>Security</span><span class="plus" aria-hidden="true">+</span></summary>
+<div class="body">
+<div><h4>What the criteria cover</h4><p>Protection against unauthorized access, both physical and logical. This is the one criterion every SOC 2 report must include.</p></div>
+<div><h4>What we do</h4><ul><li>Multi-factor authentication for every employee and contractor</li><li>Role-based access with least privilege, reviewed quarterly</li><li>Encryption in transit (TLS) and at rest</li><li>Vulnerability scanning and third-party penetration testing</li><li>Centralized logging and alerting on suspicious activity</li></ul></div>
+</div>
+</details>
+<details>
+<summary><span><span class="k">02</span>Availability</span><span class="plus" aria-hidden="true">+</span></summary>
+<div class="body">
+<div><h4>What the criteria cover</h4><p>The system is available for operation and use as committed. Audits run on deadlines, and so do we.</p></div>
+<div><h4>What we do</h4><ul><li>Cloud infrastructure with redundancy across availability zones</li><li>Encrypted backups, tested restores</li><li>Monitoring with on-call response</li><li>A documented business continuity and disaster recovery plan</li></ul></div>
+</div>
+</details>
+<details>
+<summary><span><span class="k">03</span>Processing integrity</span><span class="plus" aria-hidden="true">+</span></summary>
+<div class="body">
+<div><h4>What the criteria cover</h4><p>Processing is complete, valid, accurate, timely and authorized. For an audit platform, this is the heart of trust.</p></div>
+<div><h4>What we do</h4><ul><li>Every Penny result records its inputs, rule version and model version, so it can be reproduced exactly</li><li>Every class code and payroll figure links to the source document and the rule applied</li><li>Auditor review and approval before any audit is final</li><li>Change management and testing before releases</li></ul></div>
+</div>
+</details>
+<details>
+<summary><span><span class="k">04</span>Confidentiality</span><span class="plus" aria-hidden="true">+</span></summary>
+<div class="body">
+<div><h4>What the criteria cover</h4><p>Information designated as confidential is protected as agreed. Payroll and premium are confidential by default.</p></div>
+<div><h4>What we do</h4><ul><li>Each carrier's data is isolated; nothing is pooled across carriers except learned correction patterns with no payroll, premium or policyholder names</li><li>Confidentiality agreements with every employee, contractor and vendor</li><li>Data classification and handling rules for payroll, tax and policy records</li><li>Secure deletion at the end of the agreed retention period</li></ul></div>
+</div>
+</details>
+<details>
+<summary><span><span class="k">05</span>Privacy</span><span class="plus" aria-hidden="true">+</span></summary>
+<div class="body">
+<div><h4>What the criteria cover</h4><p>Personal information is collected, used, retained, disclosed and disposed of in line with our commitments and the law.</p></div>
+<div><h4>What we do</h4><ul><li>We collect only what the audit needs and tell insureds what that is</li><li>Employee names and pay are used for classification and premium only</li><li>Social Security numbers that appear in uploaded records are redacted where they are not needed</li><li>Insureds and carriers can request access to or deletion of their data</li></ul></div>
+</div>
+</details>
+</div>
+</div>
+</section>
+
+<section class="white" id="how">
+<div class="wrap">
+<div class="head">
+<span class="kicker">How data moves</span>
+<h2>Three parties, one set of records, clear walls.</h2>
+<p class="lede">A business shares records with Penny. Penny prepares the audit for the insurer. The insurer's auditor makes the decision. Each party sees what it needs and nothing more.</p>
+</div>
+<figure class="wide">
+<svg id="dataflow" viewBox="0 0 1100 340" role="img" aria-label="Data flow: business records go to Penny encrypted, Penny prepares the audit for the insurer's auditor, and each carrier's data is walled off from every other carrier">
+<defs><marker id="arw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#8A8F96"/></marker></defs>
+<g font-family="IBM Plex Sans, sans-serif">
+<rect x="30" y="90" width="240" height="120" rx="14" fill="#FFFFFF" stroke="#8A8F96" stroke-width="1.3"/>
+<text x="150" y="128" text-anchor="middle" font-size="16" font-weight="600" fill="#15191F">The business</text>
+<text x="150" y="152" text-anchor="middle" font-size="13" fill="#3E434A">payroll, 941s, certificates</text>
+<text x="150" y="172" text-anchor="middle" font-size="13" fill="#3E434A">sees its own audit, explained</text>
+<rect x="430" y="60" width="240" height="180" rx="14" fill="#A9481F" fill-opacity="0.12" stroke="#A9481F" stroke-width="2"/>
+<text x="550" y="100" text-anchor="middle" font-size="16" font-weight="600" fill="#15191F">Penny and Propono</text>
+<text x="550" y="124" text-anchor="middle" font-size="13" fill="#3E434A">encrypted at rest</text>
+<text x="550" y="144" text-anchor="middle" font-size="13" fill="#3E434A">every action logged</text>
+<text x="550" y="164" text-anchor="middle" font-size="13" fill="#3E434A">SSNs redacted where not needed</text>
+<text x="550" y="184" text-anchor="middle" font-size="13" fill="#3E434A">AI providers cannot train on data</text>
+<text x="550" y="214" text-anchor="middle" font-size="12.5" fill="#A9481F" font-weight="600">SOC 2 Type II</text>
+<rect x="830" y="60" width="240" height="80" rx="14" fill="#FFFFFF" stroke="#8A8F96" stroke-width="1.3"/>
+<text x="950" y="92" text-anchor="middle" font-size="16" font-weight="600" fill="#15191F">Insurer A</text>
+<text x="950" y="116" text-anchor="middle" font-size="13" fill="#3E434A">auditor decides, sees its insureds only</text>
+<rect x="830" y="170" width="240" height="80" rx="14" fill="#FFFFFF" stroke="#8A8F96" stroke-width="1.3"/>
+<text x="950" y="202" text-anchor="middle" font-size="16" font-weight="600" fill="#15191F">Insurer B</text>
+<text x="950" y="226" text-anchor="middle" font-size="13" fill="#3E434A">isolated from Insurer A</text>
+<line class="wall" x1="830" y1="155" x2="1070" y2="155" stroke="#A9481F" stroke-width="2"/>
+<text x="950" y="150" text-anchor="middle" font-size="11.5" fill="#A9481F">no data crosses this line</text>
+<text x="350" y="135" text-anchor="middle" font-size="12.5" fill="#5B5F66">encrypted in transit</text>
+<text x="750" y="92" text-anchor="middle" font-size="12.5" fill="#5B5F66">prepared audit</text>
+<text x="750" y="202" text-anchor="middle" font-size="12.5" fill="#5B5F66">prepared audit</text>
+<text x="550" y="290" text-anchor="middle" font-size="13.5" fill="#5B5F66">What is shared across carriers: learned correction patterns only. Never payroll, premium or policyholder names.</text>
+</g>
+<g fill="none" stroke="#8A8F96" stroke-width="1.3">
+<path d="M270 150 H428" marker-end="url(#arw)"/>
+<path d="M670 100 H828" marker-end="url(#arw)"/>
+<path d="M670 210 H828" marker-end="url(#arw)"/>
+</g>
+<g class="lock" transform="translate(338,100)" aria-hidden="true"><rect x="0" y="6" width="22" height="16" rx="3" fill="#15191F"/><path d="M4 6V4a7 7 0 0 1 14 0v2" fill="none" stroke="#15191F" stroke-width="2.4"/></g>
+</svg>
+<figcaption>Every hop is encrypted. Carriers never see each other's data, and the business sees only its own audit.</figcaption>
+</figure>
+</div>
+</section>
+
+<section id="protect">
+<div class="wrap">
+<div class="head">
+<span class="kicker">Who we protect</span>
+<h2>Three groups, three sets of commitments.</h2>
+</div>
+<div class="grid">
+<div class="card">
+<h3>Businesses</h3>
+<ul class="list">
+<li>We ask only for what the audit needs, and we tell you why we need it</li>
+<li>Your records are used for your audit, never sold or shared with other businesses</li>
+<li>You can see every document you uploaded and request deletion when the audit is closed</li>
+<li>The free tools run without an account and do not keep what you type</li>
+</ul>
+</div>
+<div class="card">
+<h3>Employees</h3>
+<ul class="list">
+<li>Names and pay are used only to classify work and calculate premium</li>
+<li>Social Security numbers are redacted from uploaded records where they are not needed</li>
+<li>Employees are never contacted by Penny; the business and its bookkeeper are</li>
+<li>Employee records are deleted on the same schedule as the audit file</li>
+</ul>
+</div>
+<div class="card tint">
+<h3>Insurers</h3>
+<ul class="list">
+<li>Your book is isolated from every other carrier's</li>
+<li>Single sign-on, role-based access and a full audit trail for your team</li>
+<li>Data processing terms built to support your obligations under state insurance data security laws</li>
+<li>The SOC 2 Type II report, penetration test summary and security questionnaire are available under NDA</li>
+</ul>
+</div>
+</div>
+</div>
+</section>
+
+<section class="white">
+<div class="wrap">
+<div class="head">
+<span class="kicker">Data lifecycle</span>
+<h2>From upload to deletion.</h2>
+</div>
+<div class="life">
+<div><span class="n">01 Collect</span><strong>Only what the audit needs</strong><span>Penny names each document and why it matters before asking for it. Uploads go straight to encrypted storage.</span></div>
+<div><span class="n">02 Process</span><strong>Reproducible and logged</strong><span>Classification and reconciliation record their inputs, rule version and model version. Every suggestion is traceable.</span></div>
+<div><span class="n">03 Review</span><strong>A person decides</strong><span>The carrier's auditor approves, corrects or rejects. Only auditor-confirmed outcomes become training data.</span></div>
+<div><span class="n">04 Retain</span><strong>For the agreed period</strong><span>Audit files are kept for the retention period the carrier sets, usually matching its own records policy.</span></div>
+<div><span class="n">05 Delete</span><strong>Securely, on schedule</strong><span>Records are deleted at the end of retention or on a verified request, with deletion logged.</span></div>
+</div>
+</div>
+</section>
+
+<section>
+<div class="wrap">
+<div class="head">
+<span class="kicker">AI and your data</span>
+<h2>How the AI uses what you share.</h2>
+</div>
+<div class="two-col">
+<div class="card"><h3>What the AI reads</h3><p>Payroll registers, tax filings, certificates and policy documents, to extract figures and propose classifications. Each extraction links back to the page it came from.</p></div>
+<div class="card"><h3>What the AI never does</h3><p>It never finalizes an audit on its own, never shares one carrier's data with another, and never trains outside providers' models. Our AI providers are bound by agreements that prohibit training on customer data.</p></div>
+<div class="card"><h3>What improves the model</h3><p>Auditor-confirmed outcomes. A business's claim or a Penny suggestion alone never becomes training data. Pooled learning uses correction patterns only, with no payroll, premium or names.</p></div>
+<div class="card"><h3>What you can check</h3><p>Any result can be re-run with the same inputs, rule version and model version to confirm it matches. Regulators and auditors can inspect the record of every decision.</p></div>
+</div>
+</div>
+</section>
+
+<section class="white">
+<div class="wrap">
+<div class="head">
+<span class="kicker">Questions we get</span>
+<h2>Straight answers.</h2>
+</div>
+<div class="faq">
+<details><summary>Is Penny itself SOC 2 certified, or just Propono?<span aria-hidden="true">+</span></summary><p>Penny runs on the Propono platform, and the SOC 2 Type II report covers that platform, its infrastructure and the people who operate it. Penny's free tools, Pro accounts and the insurer dispute portal all run inside that boundary.</p></details>
+<details><summary>Can my carrier see what I asked Penny?<span aria-hidden="true">+</span></summary><p>If you are using Penny inside your carrier's audit portal, your questions and uploads are part of your audit file with that carrier. If you are using Penny on your own, your data is yours and is not shared with a carrier unless you choose to send it.</p></details>
+<details><summary>Where is data stored?<span aria-hidden="true">+</span></summary><p>In United States cloud regions, encrypted at rest. We do not move customer data outside the United States.</p></details>
+<details><summary>What happens if there is a security incident?<span aria-hidden="true">+</span></summary><p>We follow a documented incident response plan: contain, investigate, notify affected customers within the timelines in our agreements and applicable law, and publish what we learned.</p></details>
+<details><summary>How do I get the SOC 2 report?<span aria-hidden="true">+</span></summary><p>Ask. Carriers, audit firms and partners receive the full report, penetration test summary and completed security questionnaire under a standard NDA.</p></details>
+</div>
+</div>
+</section>
+
+<section class="dark cta" id="report">
+<div class="wrap">
+<div style="display:flex;flex-direction:column;gap:10px;max-width:660px">
+<h2>Need the details for your security review?</h2>
+<p>We will send the SOC 2 Type II report, penetration test summary and a completed security questionnaire under NDA, and get on a call with your security team.</p>
+</div>
+<a class="btn" href="mailto:[CONTACT EMAIL]?subject=SOC%202%20report%20request">Request the SOC 2 report</a>
+</div>
+</section>
+</main>
+
+<footer>
+<div class="wrap">
+<div style="display:flex;flex-direction:column;gap:4px;max-width:640px">
+<strong>Penny by Propono</strong>
+<span>This page summarizes our controls in plain language. The SOC 2 Type II report and our data processing terms are the governing documents.</span>
+</div>
+<nav aria-label="Footer"><a href="index.html">Home</a><a href="insurers.html">For insurers</a><a href="research.html">Research</a><span>© 2026 Propono Systems Inc. · SOC 2 Type II certified</span></nav>
+</div>
+</footer>
+<script src="penny.js"></script>
+</body>
+</html>

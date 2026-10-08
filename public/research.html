@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Research: provably safe automation for premium audit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&amp;family=IBM+Plex+Mono:wght@500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="penny.css">
+<style>
+.hero{background:#fff;border-bottom:1px solid var(--line);padding:64px 0 72px}
+.hero .wrap{display:flex;flex-direction:column;gap:22px}
+.question{font-family:'Bricolage Grotesque',sans-serif;font-size:clamp(26px,3.4vw,38px);line-height:1.18;border-left:4px solid var(--cu);padding-left:20px;max-width:30ch;letter-spacing:-0.6px}
+.compare{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:#fff}
+.compare .cell{padding:18px 22px;border-bottom:1px solid var(--line);font-size:15px}
+.compare .hd{background:var(--paper-2);font-weight:600;font-size:13px;color:var(--muted)}
+.compare .theirs{color:var(--body)}
+.compare .ours{background:var(--cu-tint)}
+.who{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
+.who .card h3{font-size:24px}
+.who .card ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:15px;color:var(--body)}
+.objs{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px}
+.obj{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:26px;display:flex;flex-direction:column;gap:10px}
+.obj.core{border:2px solid var(--cu)}
+.obj p{font-size:15px;color:var(--body)}
+.obj .ok{font-size:14px;background:var(--paper-2);border-radius:10px;padding:10px 12px;color:var(--ink)}
+.refs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px;font-size:15px}
+.refs li{display:grid;grid-template-columns:minmax(180px,240px) 1fr;gap:16px;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.refs li span:first-child{font-weight:600}
+.refs li span:last-child{color:var(--body)}
+@media (max-width:640px){.refs li{grid-template-columns:1fr;gap:4px}}
+/* dollars chart */
+.toggle{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:#fff}
+.toggle button{border:none;background:transparent;font:inherit;font-size:14px;font-weight:600;padding:10px 16px;cursor:pointer;color:var(--body);min-height:44px}
+.toggle button[aria-pressed="true"]{background:var(--ink);color:#fff}
+#dollars rect{transition:x .7s var(--ease),y .7s var(--ease),width .7s var(--ease),height .7s var(--ease),fill .7s}
+#dollars text.lbl{transition:opacity .4s}
+/* evidence chart */
+#evidence .pt{cursor:pointer}
+#evidence .pt circle{transition:r .2s}
+#evidence .pt:hover circle,#evidence .pt:focus circle{r:9}
+#evidence .tip{opacity:0;transition:opacity .2s;pointer-events:none}
+#evidence .pt:hover .tip,#evidence .pt:focus .tip{opacity:1}
+/* loop */
+#loop .box rect{transition:fill .4s,stroke .4s}
+#loop .box text{transition:fill .4s}
+#loop.go .box rect{animation:lit 6s var(--ease) infinite}
+#loop.go .box:nth-child(1) rect{animation-delay:0s}#loop.go .box:nth-child(2) rect{animation-delay:1.1s}#loop.go .box:nth-child(3) rect{animation-delay:2.2s}#loop.go .box:nth-child(4) rect{animation-delay:3.3s}#loop.go .box:nth-child(5) rect{animation-delay:4.4s}
+@keyframes lit{0%,16%{fill:#A9481F;fill-opacity:.14;stroke:#A9481F;stroke-width:2}20%,100%{fill:#FFFFFF;fill-opacity:1;stroke:#8A8F96;stroke-width:1.3}}
+#loop.go .pulse{animation:dash 6s linear infinite}
+@keyframes dash{to{stroke-dashoffset:-240}}
+.sched tr:hover td{background:var(--paper-2)}
+.sched{width:100%;border-collapse:collapse;font-size:14.5px}
+.sched td{padding:10px 12px;border-bottom:1px solid var(--line-soft);vertical-align:middle}
+.sched td:first-child{width:34%;font-weight:500}
+.sched .bar{height:16px;border-radius:999px;background:#1F5F8B;opacity:.35;position:relative}
+.sched .bar.core{background:var(--cu);opacity:1}
+.sched .bar.gray{background:#8A8F96}
+.sched .track{position:relative;height:16px;background:repeating-linear-gradient(90deg,transparent 0,transparent calc(100%/12 - 1px),var(--line-soft) calc(100%/12 - 1px),var(--line-soft) calc(100%/12))}
+.sched .track .bar{position:absolute;top:0}
+.sched .months{display:grid;grid-template-columns:repeat(12,1fr);font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--muted)}
+
+/* deep dives */
+.acc{display:flex;flex-direction:column;gap:12px}
+.acc details{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.acc summary{list-style:none;cursor:pointer;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:20px 24px}
+.acc summary::-webkit-details-marker{display:none}
+.acc summary .t{display:flex;flex-direction:column;gap:4px}
+.acc summary .t strong{font-size:17px}
+.acc summary .t span{font-size:14.5px;color:var(--body);max-width:70ch}
+.acc summary .plus{width:30px;height:30px;border:1px solid var(--line);border-radius:50%;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;transition:transform .3s var(--ease),background .3s;font-size:18px;line-height:1;margin-top:2px}
+.acc details[open] summary .plus{transform:rotate(45deg);background:var(--cu-tint);border-color:var(--cu-light)}
+.acc .body{padding:0 24px 22px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;border-top:1px solid var(--line-soft);padding-top:18px}
+.acc .body h4{margin-bottom:6px;font-size:15px}
+.acc .body p,.acc .body li{font-size:14.5px;color:var(--body)}
+.acc .body ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:5px}
+.acc .body code{font-family:'IBM Plex Mono',monospace;font-size:13px;background:var(--paper-2);padding:1px 6px;border-radius:4px}
+.budget{background:#fff;border:1px solid var(--line);border-radius:20px;padding:28px;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:28px;align-items:start}
+.budget label{font-weight:600;display:block;margin-bottom:6px}
+.budget .out{display:flex;flex-direction:column;gap:14px}
+.budget .big{font-family:'IBM Plex Mono',monospace;font-size:40px;font-weight:500;line-height:1}
+.budget .note{font-size:13.5px;color:var(--muted)}
+.uses{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px}
+.uses .card .tag{font-size:12.5px;color:var(--cu);font-family:'IBM Plex Mono',monospace}
+.skeptic details{border-bottom:1px solid var(--line);padding:16px 0}
+.skeptic summary{cursor:pointer;font-weight:600;font-size:16px;list-style:none;display:flex;justify-content:space-between;gap:12px}
+.skeptic summary::-webkit-details-marker{display:none}
+.skeptic p{margin-top:10px;font-size:15px;color:var(--body);max-width:74ch}
+.cta .wrap{display:flex;flex-wrap:wrap;gap:24px;align-items:center;justify-content:space-between}
+</style>
+</head>
+<body>
+<header class="site">
+<div class="wrap">
+<a class="brand" href="index.html">
+<svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="15" fill="none" stroke="#A9481F" stroke-width="2.5"/><circle cx="17" cy="17" r="10" fill="none" stroke="#A9481F" stroke-width="1.2"/><path d="M14 23V11h4.2a3.4 3.4 0 0 1 0 6.8H14" fill="none" stroke="#A9481F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<b>Penny</b><small>by Propono</small>
+</a>
+<nav class="main" aria-label="Main">
+<a href="index.html#tools">Free tools</a>
+<a href="index.html#review">Audit Review</a>
+<a href="insurers.html">For insurers</a>
+<a href="research.html" aria-current="page">Research</a>
+<a href="security.html">Security</a>
+<a href="index.html#pricing">Pricing</a>
+</nav>
+<a class="btn" href="#partner">Partner on the research</a>
+</div>
+</header>
+
+<main>
+<section class="hero">
+<div class="wrap">
+<span class="kicker">Research plan</span>
+<h1>Provably safe automation for premium audit.</h1>
+<p class="lede">Our research proposal to the U.S. National Science Foundation's SBIR program asks a question the insurance industry hasn't answered yet. The answer is what lets Penny take on more work without asking anyone to take it on faith.</p>
+<p class="question">How does an AI system prove which audit decisions it can make on its own, when mistakes are measured in dollars?</p>
+</div>
+</section>
+
+<section>
+<div class="wrap">
+<div class="head">
+<span class="kicker">Who benefits</span>
+<h2>Accurate to the penny, for everyone the audit touches.</h2>
+<p class="lede">An audit done right is the same audit for the business paying it and the insurer collecting it. That is why the research is worth doing for all three.</p>
+</div>
+<div class="who">
+<div class="card">
+<h3>Small businesses</h3>
+<ul>
+<li>No surprise bills built on a misread payroll report or the wrong class code</li>
+<li>Every line explained in plain language, with the rule behind it</li>
+<li>A fast, fair way to fix mistakes without hiring a consultant</li>
+<li>Fewer document requests, because Penny asks for the right records the first time</li>
+</ul>
+</div>
+<div class="card">
+<h3>Large employers</h3>
+<ul>
+<li>Consistent treatment across many locations, states and policy years</li>
+<li>Multi-state payroll allocated the same way every time, with an audit trail</li>
+<li>Disputes resolved on evidence instead of negotiation</li>
+<li>Audits that finish on time, so budgets and renewals are not held hostage</li>
+</ul>
+</div>
+<div class="card tint">
+<h3>Insurers and auditors</h3>
+<ul>
+<li>A dollar-based guarantee for any audit type they automate</li>
+<li>Auditors spend their time on judgment, not chasing documents</li>
+<li>Fewer disputes reach the audit team, and the rest arrive organized</li>
+<li>Premiums that accurately fund benefits for injured workers</li>
+</ul>
+</div>
+</div>
+</div>
+</section>
+
+<section class="white">
+<div class="wrap">
+<div class="head">
+<span class="kicker">The gap</span>
+<h2>Today's methods offer guarantees that premium audit breaks.</h2>
+<p class="lede">Conformal prediction, conformal risk control and learning-to-defer can tell a system when to hand a decision to a person. They rely on assumptions that don't hold in audit.</p>
+</div>
+<div class="compare" role="table" aria-label="Assumptions versus premium audit reality">
+<span class="cell hd" role="columnheader">What existing methods assume</span><span class="cell hd ours" role="columnheader">What premium audit looks like</span>
+<span class="cell theirs" role="cell">Every error costs the same</span><span class="cell ours" role="cell">Errors are measured in premium dollars, and a few are very large</span>
+<span class="cell theirs" role="cell">Plenty of labeled examples</span><span class="cell ours" role="cell">Each audit type, carrier and state yields only a handful of corrections</span>
+<span class="cell theirs" role="cell">Labels are correct</span><span class="cell ours" role="cell">Experienced auditors sometimes disagree, so the right answer is uncertain</span>
+<span class="cell theirs" role="cell">The data doesn't change</span><span class="cell ours" role="cell">Classification manuals change every year, and each carrier's book is different</span>
+</div>
+</div>
+</section>
+
+<section>
+<div class="wrap grid two">
+<figure>
+<div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px">
+<strong style="font-family:'Bricolage Grotesque',sans-serif;font-size:18px">Why we count dollars, not just accuracy</strong>
+<div class="toggle" role="group" aria-label="How to count the same 20 corrections">
+<button type="button" aria-pressed="true" data-mode="errors">Count errors</button>
+<button type="button" aria-pressed="false" data-mode="dollars">Count dollars</button>
+</div>
+</div>
+<svg id="dollars" viewBox="0 0 560 280" role="img" aria-label="The same twenty corrections, counted as errors and then as dollars">
+<g id="sq"></g>
+<text class="lbl" id="lbl-a" x="16" y="246" font-family="IBM Plex Sans, sans-serif" font-size="14" fill="#3E434A">20 corrections. Each box is one audit the system got wrong.</text>
+<text class="lbl" id="lbl-b" x="16" y="266" font-family="IBM Plex Sans, sans-serif" font-size="14" fill="#3E434A">Counted this way, they all look the same.</text>
+</svg>
+<figcaption>Illustration, not data. Switch to dollars and one missed uninsured subcontractor outweighs the other nineteen. Our method bounds dollar-weighted error, the measure that matters to a business and its insurer alike.</figcaption>
+</figure>
+<figure>
+<strong style="font-family:'Bricolage Grotesque',sans-serif;font-size:18px">Automation expands only as evidence builds</strong>
+<svg id="evidence" viewBox="0 0 560 280" role="img" aria-label="Automation share rises in steps as auditor corrections accumulate; hover a step for details">
+<line x1="60" y1="230" x2="540" y2="230" stroke="#8A8F96" stroke-width="1.2"/>
+<line x1="60" y1="40" x2="60" y2="230" stroke="#8A8F96" stroke-width="1.2"/>
+<text x="300" y="262" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13" fill="#5B5F66">Auditor corrections collected for an audit type</text>
+<text x="22" y="140" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13" fill="#5B5F66" transform="rotate(-90 22 140)">Files Penny clears alone</text>
+<path d="M60 226 H180 V186 H300 V136 H420 V86 H540" fill="none" stroke="#A9481F" stroke-width="3"/>
+<text x="70" y="216" font-family="IBM Plex Sans, sans-serif" font-size="12.5" fill="#5B5F66">auditor reviews every file</text>
+<g class="pt" tabindex="0"><circle cx="180" cy="186" r="6" fill="#A9481F"/><g class="tip"><rect x="120" y="134" width="190" height="44" rx="8" fill="#15191F"/><text x="130" y="152" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="#fff">First certification</text><text x="130" y="168" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="#D6D3CD">Routine files begin to clear alone</text></g></g>
+<g class="pt" tabindex="0"><circle cx="300" cy="136" r="6" fill="#A9481F"/><g class="tip"><rect x="240" y="84" width="190" height="44" rx="8" fill="#15191F"/><text x="250" y="102" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="#fff">Bound re-certified</text><text x="250" y="118" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="#D6D3CD">More of the type clears, same ceiling</text></g></g>
+<g class="pt" tabindex="0"><circle cx="420" cy="86" r="6" fill="#A9481F"/><g class="tip"><rect x="300" y="34" width="190" height="44" rx="8" fill="#15191F"/><text x="310" y="52" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="#fff">Review turned off</text><text x="310" y="68" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="#D6D3CD">Unusual files still go to a person</text></g></g>
+</svg>
+<figcaption>Illustration of the intended behavior. Each step up happens only after the dollar error bound is certified on that carrier's own corrections. Hover or tab to a step.</figcaption>
+</figure>
+</div>
+</section>
+
+<section class="white">
+<div class="wrap">
+<div class="head">
+<span class="kicker">The approach</span>
+<h2>Risk-controlled learning to defer, built for audit.</h2>
+<p class="lede">Penny decides, audit type by audit type, which decisions it may finalize on its own. It guarantees, at a confidence level the carrier sets, that dollar-weighted premium error on automated files stays below a target. Every auditor correction feeds both learning and the guarantee.</p>
+</div>
+<figure class="wide">
+<svg id="loop" viewBox="0 0 1100 300" role="img" aria-label="The research loop: collect, pre-build, auditor decides, correction recorded, risk control updates automation">
+<defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#8A8F96"/></marker></defs>
+<g font-family="IBM Plex Sans, sans-serif" font-size="15">
+<g class="box"><rect x="20" y="70" width="180" height="84" rx="12" fill="#FFFFFF" stroke="#8A8F96" stroke-width="1.3"/><text x="110" y="104" text-anchor="middle" font-weight="600" fill="#15191F">Collect</text><text x="110" y="126" text-anchor="middle" font-size="13" fill="#3E434A">payroll, 941s, certificates</text></g>
+<g class="box"><rect x="240" y="70" width="180" height="84" rx="12" fill="#FFFFFF" stroke="#8A8F96" stroke-width="1.3"/><text x="330" y="104" text-anchor="middle" font-weight="600" fill="#15191F">Pre-build</text><text x="330" y="126" text-anchor="middle" font-size="13" fill="#3E434A">classes cited to the rule</text></g>
+<g class="box"><rect x="460" y="70" width="180" height="84" rx="12" fill="#FFFFFF" stroke="#8A8F96" stroke-width="1.3"/><text x="550" y="104" text-anchor="middle" font-weight="600" fill="#15191F">Auditor decides</text><text x="550" y="126" text-anchor="middle" font-size="13" fill="#3E434A">accept, correct, send back</text></g>
+<g class="box"><rect x="680" y="70" width="180" height="84" rx="12" fill="#FFFFFF" stroke="#8A8F96" stroke-width="1.3"/><text x="770" y="104" text-anchor="middle" font-weight="600" fill="#15191F">Correction recorded</text><text x="770" y="126" text-anchor="middle" font-size="13" fill="#3E434A">ground truth, in dollars</text></g>
+<g class="box"><rect x="900" y="70" width="180" height="84" rx="12" fill="#FFFFFF" stroke="#8A8F96" stroke-width="1.3"/><text x="990" y="104" text-anchor="middle" font-weight="600" fill="#15191F">Risk control</text><text x="990" y="126" text-anchor="middle" font-size="13" fill="#3E434A">sets what can automate</text></g>
+</g>
+<g fill="none" stroke="#8A8F96" stroke-width="1.3">
+<path d="M200 112 H238" marker-end="url(#ar)"/><path d="M420 112 H458" marker-end="url(#ar)"/><path d="M640 112 H678" marker-end="url(#ar)"/><path d="M860 112 H898" marker-end="url(#ar)"/>
+<path class="pulse" d="M990 154 V230 H110 V156" marker-end="url(#ar)" stroke-dasharray="6 6"/>
+</g>
+<text x="550" y="256" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13.5" fill="#5B5F66">Proven audit types skip auditor review on the next cycle; anything uncertain still goes to a person</text>
+</svg>
+<figcaption style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center"><span>The loop. Corrections improve the model and calibrate the guarantee at the same time.</span><button type="button" class="chip" id="replay" style="border:1px solid var(--line);background:#fff;color:var(--ink);font:inherit;font-size:13px;padding:8px 14px;border-radius:999px;cursor:pointer">Replay</button></figcaption>
+</figure>
+</div>
+</section>
+
+<section>
+<div class="wrap">
+<div class="head">
+<span class="kicker">Phase I objectives</span>
+<h2>Four objectives, one core question.</h2>
+</div>
+<div class="objs">
+<div class="obj core"><span class="kicker">Objective 1 · the core</span><h3>Dollar-weighted risk control</h3><p>A rule that chooses which files to auto-clear while bounding expected premium error on cleared files below a target, such as 1% of premium.</p><span class="ok">Success: the bound holds on held-out audits while at least 40% of routine files clear automatically.</span></div>
+<div class="obj"><span class="kicker">Objective 2</span><h3>Learning from few, noisy labels</h3><p>Pooling evidence across audit types and carriers, and modeling disagreement between auditors on a double-reviewed sample.</p><span class="ok">Success: valid control with 50% fewer labels per audit type than a no-pooling baseline.</span></div>
+<div class="obj"><span class="kicker">Objective 3</span><h3>Staying valid as rules change</h3><p>Drift detection and reweighted calibration when manuals update or a new carrier joins, falling back to human review when validity can't be certified.</p><span class="ok">Success: no loss of error control across a simulated annual manual change and a held-out carrier.</span></div>
+<div class="obj"><span class="kicker">Objective 4</span><h3>The inputs it governs</h3><p>Rule-grounded classification across NCCI and California WCIRB rules, plus payroll reconciliation across 941s, state wage reports and registers.</p><span class="ok">Success: 90% agreement with final auditor codes, calibration error at or below 5%, 98% of payroll dollars traced to source.</span></div>
+</div>
+</div>
+</section>
+
+
+<section class="white" id="hard">
+<div class="wrap">
+<div class="head">
+<span class="kicker">The hard problems</span>
+<h2>What actually has to be solved.</h2>
+<p class="lede">Each problem below has a plain-language summary. Open one to see the technical detail, or skip them all and keep the picture: these are the places where "AI for audit" usually breaks, and where this research puts its effort.</p>
+</div>
+<div class="acc">
+<details>
+<summary><span class="t"><strong>1. A few errors carry most of the money</strong><span>Audit mistakes are not evenly sized. One missed uninsured subcontractor can cost more than a hundred small corrections, so a guarantee on average error says little.</span></span><span class="plus" aria-hidden="true">+</span></summary>
+<div class="body">
+<div><h4>Why it is hard</h4><p>Conformal risk control gives finite-sample guarantees for losses that are bounded and reasonably well behaved. Dollar-weighted premium error is heavy-tailed: most files contribute cents, a few contribute thousands. A bound on the mean is dominated by rare events the calibration set may never have seen.</p></div>
+<div><h4>What we will try</h4><ul><li>Cap the per-file loss at a policy-level ceiling and control the capped risk, while a separate tail detector routes high-exposure signals (large 1099 payments with no certificate, large payroll swings) to a person regardless of the model's confidence</li><li>Control tail risk directly with a conditional value-at-risk style objective, not only the mean</li><li>Evaluate on the dollar distribution, not accuracy, and report the realized tail separately</li></ul></div>
+<div><h4>How we will know</h4><p>On held-out audits the realized dollar error on auto-cleared files stays under the target at the stated confidence, including in the worst 5% of files. If the tail breaks the bound, the method fails, and we say so.</p></div>
+</div>
+</details>
+<details>
+<summary><span class="t"><strong>2. Not enough examples where you need them</strong><span>A guarantee needs calibration data. A single carrier may have only a dozen corrections for a given class and state.</span></span><span class="plus" aria-hidden="true">+</span></summary>
+<div class="body">
+<div><h4>Why it is hard</h4><p>Finite-sample conformal guarantees have a resolution floor: with <code>n</code> calibration points you cannot certify a miss rate finer than about <code>1 / (n + 1)</code>. Certifying a 1% rate needs on the order of 99 clean, exchangeable examples for that group. Split the book by class, state and carrier, and most groups are far smaller.</p></div>
+<div><h4>What we will try</h4><ul><li>Partial pooling across related groups (an empirical Bayes or hierarchical prior), so a new carrier starts from the industry pattern and moves toward its own data as corrections arrive</li><li>Group-conditional calibration where groups are large enough, pooled calibration where they are not, with the choice made by a rule, not by hand</li><li>Report the sample size behind every certification so a carrier can see how much evidence supports it</li></ul></div>
+<div><h4>How we will know</h4><p>Objective 2's target: valid control with half the labels a no-pooling baseline needs, measured on held-out groups.</p></div>
+</div>
+</details>
+<details>
+<summary><span class="t"><strong>3. The experts do not always agree</strong><span>Two good auditors can classify the same employee differently. If the "right answer" is uncertain, so is any guarantee built on it.</span></span><span class="plus" aria-hidden="true">+</span></summary>
+<div class="body">
+<div><h4>Why it is hard</h4><p>Risk control assumes the labels are the truth. In audit, a label is an expert judgment under time pressure. Disagreement between auditors sets a floor under any system's measurable error, and systematic bias in one carrier's labels would be learned as if it were correct.</p></div>
+<div><h4>What we will try</h4><ul><li>Double-review a sample of audits to measure agreement (a kappa statistic by class and state) and model each auditor's reliability with a Dawid and Skene style estimator</li><li>Treat labels as noisy observations of a latent truth when calibrating, and widen the guarantee where disagreement is high</li><li>Surface cases where Penny and the auditor disagree as review items, not as training data, until a second opinion settles them</li></ul></div>
+<div><h4>How we will know</h4><p>Calibration remains valid on the double-reviewed subset, and the disagreement floor is published alongside the error bound.</p></div>
+</div>
+</details>
+<details>
+<summary><span class="t"><strong>4. The rules change every year</strong><span>Classification manuals update, rates change, a new carrier joins with a different book. A guarantee calibrated last year may not hold this year.</span></span><span class="plus" aria-hidden="true">+</span></summary>
+<div class="body">
+<div><h4>Why it is hard</h4><p>Conformal validity rests on exchangeability: tomorrow's files look like the calibration files. Rule changes, portfolio shifts and new states break that. Weighted conformal methods handle shift in the inputs if you can estimate how the distribution moved, which is itself uncertain. No method can promise validity under arbitrary, unmeasured change.</p></div>
+<div><h4>What we will try</h4><ul><li>Pin every run to the rule set in force for the policy's effective date, so a manual update is a known event, not a surprise</li><li>Detect drift in the inputs and in the correction rate; when it trips, recalibrate on recent data or fall back to human review for the affected group</li><li>Weight calibration data toward the current distribution where the shift can be estimated, and widen bounds where it cannot</li></ul></div>
+<div><h4>How we will know</h4><p>Error control holds across a simulated annual manual change and on a carrier held out entirely from calibration. Where it does not, the system defers rather than guesses.</p></div>
+</div>
+</details>
+<details>
+<summary><span class="t"><strong>5. Automation hides its own mistakes</strong><span>Once Penny clears a file without review, nobody checks it. The data you need to keep the guarantee honest stops arriving.</span></span><span class="plus" aria-hidden="true">+</span></summary>
+<div class="body">
+<div><h4>Why it is hard</h4><p>This is the quiet failure in most automation programs. Labels only come from files a person reviewed, so auto-cleared files are missing not at random. Calibration drifts toward the files that were hard enough to review, and the guarantee silently stops describing the files it covers.</p></div>
+<div><h4>What we will try</h4><ul><li>Keep a random, uniformly sampled review stream inside every automated category: this is the Supervised stage, and it never goes to zero</li><li>Use the sampled reviews to re-certify the bound on a schedule, and shrink automation automatically if the sample shows drift</li><li>Treat the sampling rate as a tunable cost: the carrier chooses how much review to spend for how tight a guarantee</li></ul></div>
+<div><h4>How we will know</h4><p>Calibration computed from the sampled stream matches calibration on a fully reviewed holdout within the stated confidence.</p></div>
+</div>
+</details>
+<details>
+<summary><span class="t"><strong>6. Reading the documents is still hard</strong><span>Payroll registers, 941s and state wage reports describe the same money in different ways, often as scans. Every number Penny proposes has to trace to a source.</span></span><span class="plus" aria-hidden="true">+</span></summary>
+<div class="body">
+<div><h4>Why it is hard</h4><p>Periods misalign (calendar quarters versus policy periods), categories differ (gross wages versus taxable wages), and documents are incomplete or poorly scanned. Extraction errors propagate straight into premium. Language models read documents well and estimate their own uncertainty poorly.</p></div>
+<div><h4>What we will try</h4><ul><li>Treat reconciliation as constraint satisfaction: quarterly totals must sum, employee-level pay must roll up, and any violation becomes an explicit flag with a dollar size</li><li>Carry uncertainty from extraction through to premium so the risk controller can see it, rather than letting a confident wrong number pass</li><li>Prefer structured sources (payroll exports, filed 941s) over free text when both exist</li></ul></div>
+<div><h4>How we will know</h4><p>Objective 4's targets: 98% of audited payroll dollars traced to source and 90% recall on material discrepancies.</p></div>
+</div>
+</details>
+<details>
+<summary><span class="t"><strong>7. Citing the rule, and meaning it</strong><span>Penny explains each decision with the rule behind it. A citation that looks right but does not actually support the decision is worse than none.</span></span><span class="plus" aria-hidden="true">+</span></summary>
+<div class="body">
+<div><h4>Why it is hard</h4><p>Applying classification rules is close to statutory reasoning, where research shows language models still struggle: exceptions, cross-references and jurisdiction-specific definitions. Models also produce fluent but unfaithful citations. The right answer often depends on a fact that is simply not in the documents.</p></div>
+<div><h4>What we will try</h4><ul><li>Retrieve from versioned rule text and require the cited passage to entail the decision, checked by a second pass and by expert review on a sample</li><li>Abstain explicitly when a required fact is missing, and turn the gap into a document request rather than a guess</li><li>Score faithfulness separately from accuracy, because a correct code with a wrong citation is still a defect</li></ul></div>
+<div><h4>How we will know</h4><p>Experts judge the cited rule correct in at least 90% of sampled decisions, and the abstention rate falls as collection improves.</p></div>
+</div>
+</details>
+<details>
+<summary><span class="t"><strong>8. Same answer every time</strong><span>Carriers, businesses and regulators need to be able to re-run a result and get the same number. Modern AI models are not naturally deterministic, and vendors retire them.</span></span><span class="plus" aria-hidden="true">+</span></summary>
+<div class="body">
+<div><h4>Why it is hard</h4><p>Language model outputs vary run to run unless decoding is pinned, and hosted models change or disappear on the vendor's schedule. A guarantee attached to one model version does not transfer automatically to the next.</p></div>
+<div><h4>What we will try</h4><ul><li>Pin model version, decoding settings and rule version on every run, and store enough to reproduce it</li><li>Treat a model change like a rule change: re-certify before it governs anything automated</li><li>Keep the risk controller independent of any one model, so the guarantee survives a model swap</li></ul></div>
+<div><h4>How we will know</h4><p>The consistency metric: the share of reruns that reproduce the original result, with a target of 100%.</p></div>
+</div>
+</details>
+<details>
+<summary><span class="t"><strong>9. People will test the system</strong><span>Some insureds will submit documents designed to lower a bill. Some will simply make mistakes. Penny has to tell the difference without treating everyone as a suspect.</span></span><span class="plus" aria-hidden="true">+</span></summary>
+<div class="body">
+<div><h4>Why it is hard</h4><p>Any system that lets a party add evidence creates an incentive to add the right evidence. Classical risk control does not model an adversary. At the same time, most inconsistencies are honest errors, and a hostile posture would undo the trust that makes the dispute portal work.</p></div>
+<div><h4>What we will try</h4><ul><li>Cross-check every uploaded document against independent sources (filed 941s, state wage reports, certificate verification) and flag inconsistencies with their dollar impact</li><li>Route material inconsistencies to a person, never to automatic acceptance</li><li>Monitor whether dispute outcomes differ by business size or segment, so fairness is measured rather than assumed</li></ul></div>
+<div><h4>How we will know</h4><p>Synthetic adversarial files are caught at the target rate, and dollar error does not differ materially across business size bands.</p></div>
+</div>
+</details>
+</div>
+</div>
+</section>
+
+<section id="budget">
+<div class="wrap">
+<div class="head">
+<span class="kicker">A risk budget, not an accuracy score</span>
+<h2>How much evidence does a guarantee need?</h2>
+<p class="lede">Instead of asking "how accurate is the model," the right question is "how much review am I willing to spend for how tight a guarantee." Try it: pick the miss rate you would accept on automated files and see the minimum number of confirmed corrections needed before any certification is even possible.</p>
+</div>
+<div class="budget">
+<div>
+<label for="alpha">Acceptable miss rate on automated files: <span id="alphaV" class="mono">5%</span></label>
+<input type="range" id="alpha" min="1" max="20" step="1" value="5">
+<p class="note" style="margin-top:12px">This is the floor from the mathematics of conformal methods: with <span class="mono">n</span> confirmed corrections you cannot certify a miss rate finer than about <span class="mono">1 / (n + 1)</span>. Real requirements are higher once dollar weighting, label noise and drift are accounted for, which is exactly what Objectives 1 to 3 study.</p>
+</div>
+<div class="out">
+<div><span class="big" id="nmin">19</span><div class="note">confirmed corrections, minimum, for this audit type</div></div>
+<div><span class="big" id="example">~2 months</span><div class="note">at roughly 10 auditor-confirmed corrections a month for one audit type (illustration)</div></div>
+<p class="note">The practical meaning: busy, routine audit types earn automation first. Rare, high-dollar types may never leave human review, and that is the correct outcome.</p>
+</div>
+</div>
+</div>
+</section>
+
+<section class="white" id="beyond">
+<div class="wrap">
+<div class="head">
+<span class="kicker">Beyond premium audit</span>
+<h2>Any expert decision measured in dollars.</h2>
+<p class="lede">Premium audit is the first use because it is bounded, regulated and rich in expert labels. The method is general: wherever a professional reviews documents, applies rules and signs off on an amount, the same question applies. Which decisions can the machine make alone, and how much is at risk if it is wrong?</p>
+</div>
+<div class="uses">
+<div class="card"><span class="tag">Insurance</span><h3>Claims adjudication</h3><p>Pay low-complexity claims straight through with a bound on reserve dollars at risk, while adjusters handle the rest. The error that matters is dollars misallocated, not claims misrouted.</p></div>
+<div class="card"><span class="tag">Insurance</span><h3>Underwriting intake</h3><p>Straight-through processing for small commercial submissions, with a guarantee on expected loss cost error, certified on the underwriters' own corrections.</p></div>
+<div class="card"><span class="tag">Insurance</span><h3>Premium fraud and leakage</h3><p>The reconciliation engine that traces payroll to source doubles as a leakage detector, with the tail detector routing large exposures to investigators.</p></div>
+<div class="card"><span class="tag">Insurance</span><h3>Regulatory reporting</h3><p>Statistical reporting to rating bureaus depends on the same class and payroll data. Accurate audits improve the rates the whole market pays.</p></div>
+<div class="card"><span class="tag">Finance and government</span><h3>Tax examination and lending</h3><p>Tax authorities selecting returns for exam, and lenders verifying income from the same payroll records, face the same dollar-weighted, expert-labeled problem.</p></div>
+<div class="card"><span class="tag">Any industry</span><h3>Invoice, medical coding and procurement audits</h3><p>Billing codes against clinical notes, invoices against contracts, expenses against policy. Each is rule-bound review with a cost in dollars and a human who signs.</p></div>
+</div>
+<div class="acc" style="margin-top:24px">
+<details>
+<summary><span class="t"><strong>Go deeper: what transfers and what does not</strong><span>The controller and the evaluation framework transfer. The document models and rule sets are domain-specific.</span></span><span class="plus" aria-hidden="true">+</span></summary>
+<div class="body">
+<div><h4>Transfers</h4><ul><li>Dollar-weighted (cost-sensitive) risk control with tail handling</li><li>Partial pooling across small groups with per-group certification</li><li>The sampled-review design that keeps calibration honest after automation</li><li>Version pinning and re-certification on rule or model change</li><li>Evaluation on realized dollar error, with the disagreement floor published</li></ul></div>
+<div><h4>Does not transfer</h4><ul><li>The classification rule corpus and its versioning (NCCI, independent bureaus)</li><li>Document reconciliation constraints specific to payroll and tax filings</li><li>The dispute workflow and who holds appeal rights</li></ul></div>
+<div><h4>Why insurance first</h4><p>Volume is fixed by regulation, labels come from licensed experts, and the cost of each error is literally written on the bill. Few domains make the research question this measurable.</p></div>
+</div>
+</details>
+</div>
+</div>
+</section>
+
+<section id="implications">
+<div class="wrap">
+<div class="head">
+<span class="kicker">What it would change</span>
+<h2>From trusting a percentage to budgeting a risk.</h2>
+</div>
+<div class="facts">
+<div class="fact"><h3>For carriers and regulators</h3><p>Automation becomes something you can set a budget for and inspect, the way you set reserves. "The model is 95% accurate" is replaced by "automated files carry at most this much premium error, at this confidence, on our own data."</p></div>
+<div class="fact"><h3>For businesses</h3><p>The same guarantee protects the business: automated decisions are bounded in how wrong they can be in dollars, every decision shows its evidence, and a person is still reachable.</p></div>
+<div class="fact"><h3>For auditors</h3><p>The job shifts toward judgment: exceptions, disputes and the sampled reviews that keep the guarantee honest. The repetitive collection and arithmetic go away.</p></div>
+<div class="fact"><h3>For AI in regulated work</h3><p>A template for safe automation that does not depend on trusting a vendor's benchmark: certify on your own corrections, publish the bound, keep a human in the loop where the bound cannot be certified.</p></div>
+</div>
+</div>
+</section>
+
+<section class="white">
+<div class="wrap">
+<div class="head">
+<span class="kicker">What a skeptic should ask</span>
+<h2>Fair questions, honest answers.</h2>
+</div>
+<div class="skeptic">
+<details><summary>Can you really guarantee anything with so little data?<span aria-hidden="true">+</span></summary><p>Not for every audit type. The guarantee is per group, and groups with too few confirmed corrections stay in human review. That is the design, not a limitation we hide. The research question is how far partial pooling can safely lower the evidence needed.</p></details>
+<details><summary>What if the rules change and the model is wrong for months?<span aria-hidden="true">+</span></summary><p>Rule changes are pinned to effective dates, so they are known events that trigger re-certification. Unknown shifts are caught by drift monitoring and the sampled review stream, which shrinks automation automatically. Between those, there is a window of risk, and the bound's confidence level is how a carrier chooses its size.</p></details>
+<details><summary>Isn't a dollar bound just an accuracy bound with extra steps?<span aria-hidden="true">+</span></summary><p>No. Accuracy treats a $40 error and a $40,000 error the same. A dollar bound forces the system to route high-exposure files to a person even when the model is confident, which is the opposite of what an accuracy-optimized system does.</p></details>
+<details><summary>Who checks the checker?<span aria-hidden="true">+</span></summary><p>Every run is reproducible, every bound records the evidence behind it, and the benchmark and methods are intended for publication. A carrier's own auditors and a regulator can re-run any decision and recompute any bound.</p></details>
+<details><summary>What would make you conclude the approach failed?<span aria-hidden="true">+</span></summary><p>If realized dollar error on auto-cleared files exceeds the certified bound on held-out data, or if the sampled review stream cannot reproduce the calibration, the method has failed for that setting. Phase I is designed to find that out before anything is automated in production.</p></details>
+</div>
+</div>
+</section>
+
+<section>
+<div class="wrap">
+<div class="head">
+<span class="kicker">Proposed schedule</span>
+<h2>Twelve months, with the core objective running through the middle.</h2>
+</div>
+<figure>
+<table class="sched" aria-label="Proposed Phase I schedule by month">
+<thead><tr><td></td><td><div class="months"><span>M1</span><span>M2</span><span>M3</span><span>M4</span><span>M5</span><span>M6</span><span>M7</span><span>M8</span><span>M9</span><span>M10</span><span>M11</span><span>M12</span></div></td></tr></thead>
+<tbody>
+<tr><td>Data agreements and baselines</td><td><div class="track"><div class="bar gray" style="left:0;width:25%"></div></div></td></tr>
+<tr><td>Objective 4: scored inputs</td><td><div class="track"><div class="bar" style="left:8.33%;width:41.67%"></div></div></td></tr>
+<tr><td><strong>Objective 1: dollar-weighted risk control</strong></td><td><div class="track"><div class="bar core" style="left:16.67%;width:58.33%"></div></div></td></tr>
+<tr><td>Objective 2: few, noisy labels</td><td><div class="track"><div class="bar" style="left:33.33%;width:50%"></div></div></td></tr>
+<tr><td>Objective 3: validity under change</td><td><div class="track"><div class="bar" style="left:50%;width:41.67%"></div></div></td></tr>
+<tr><td>Evaluation and public benchmark</td><td><div class="track"><div class="bar gray" style="left:75%;width:25%"></div></div></td></tr>
+</tbody>
+</table>
+<figcaption>Proposed timing for a 12-month Phase I. Everything else feeds Objective 1.</figcaption>
+</figure>
+</div>
+</section>
+
+<section class="white">
+<div class="wrap">
+<div class="head">
+<span class="kicker">How the work is done</span>
+<h2>Real audits, protected data, published results.</h2>
+</div>
+<div class="facts">
+<div class="fact"><h3>Ground truth</h3><p>Closed audits from partner carriers, with the auditor's final decision as the answer, plus synthetic audit files with known answers.</p></div>
+<div class="fact"><h3>Protected data</h3><p>All data stays in Propono's SOC 2 Type II certified environment. Payroll, premiums and policyholder names are never shared across carriers. <a href="security.html">How we protect data</a>.</p></div>
+<div class="fact"><h3>Fair comparison</h3><p>Baselines include human-only review, fixed accuracy thresholds and standard conformal methods.</p></div>
+<div class="fact"><h3>Open benchmark</h3><p>An anonymized benchmark for risk-controlled automation in insurance audit, so others can test against the same yardstick.</p></div>
+</div>
+</div>
+</section>
+
+<section>
+<div class="wrap grid two">
+<div style="display:flex;flex-direction:column;gap:16px">
+<span class="kicker">Research team</span>
+<h2>Audit judgment and AI engineering in one room.</h2>
+<div class="facts" style="grid-template-columns:1fr">
+<div class="fact"><h3>Tom Hansen, Principal Investigator</h3><p>Chief Product Officer. Leads design of agentic AI systems for Fortune 1000 enterprises and the human-in-the-loop design of this research.</p></div>
+<div class="fact"><h3>Joey Lao, Engineering</h3><p>Architected the Propono platform; leads the classification, reconciliation and risk-control build.</p></div>
+<div class="fact"><h3>Cliff, Premium Audit Domain</h3><p>Two decades of premium audit management; defines ground truth, labeling standards and expert review.</p></div>
+<div class="fact"><h3>Mark Hutchings, Partnerships</h3><p>Nearly 20 years guiding businesses through premium audits; leads carrier data partnerships.</p></div>
+</div>
+<p style="color:var(--body)">An academic collaborator in uncertainty quantification will join to co-design the risk-control methods.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:16px">
+<span class="kicker">Foundations</span>
+<h2>What we build on.</h2>
+<ul class="refs">
+<li><span>Conformal prediction</span><span>Vovk, Gammerman and Shafer, Algorithmic Learning in a Random World (2005)</span></li>
+<li><span>Conformal risk control</span><span>Angelopoulos, Bates, Fisch, Lei and Schuster (2022)</span></li>
+<li><span>Learning to defer</span><span>Madras, Pitassi and Zemel (2018); Mozannar and Sontag (2020)</span></li>
+<li><span>Validity under shift</span><span>Tibshirani, Barber, Candès and Ramdas, weighted conformal prediction (2019)</span></li>
+<li><span>Noisy expert labels</span><span>Dawid and Skene (1979)</span></li>
+<li><span>Reasoning over rules</span><span>Holzenberger, Blair-Stanek and Van Durme, statutory reasoning in tax law (2020)</span></li>
+</ul>
+</div>
+</div>
+</section>
+
+<section class="dark cta" id="partner">
+<div class="wrap">
+<div style="display:flex;flex-direction:column;gap:10px;max-width:660px">
+<h2>Help answer the question.</h2>
+<p>Carriers who share closed audits get early access to the results on their own book. Businesses and partners get a fairer, faster audit. Researchers in uncertainty quantification and machine learning: we'd like to talk.</p>
+</div>
+<a class="btn" href="mailto:[CONTACT EMAIL]?subject=Penny%20research">Get in touch</a>
+</div>
+</section>
+</main>
+
+<footer>
+<div class="wrap">
+<div style="display:flex;flex-direction:column;gap:4px;max-width:640px">
+<strong>Penny by Propono</strong>
+<span>Research plan as proposed. Targets are objectives, not results.</span>
+</div>
+<nav aria-label="Footer"><a href="index.html">Home</a><a href="insurers.html">For insurers</a><a href="security.html">Data security</a><span>© 2026 Propono Systems Inc. · SOC 2 Type II certified</span></nav>
+</div>
+</footer>
+
+<script src="penny.js"></script>
+<script src="research.js"></script>
+</body>
+</html>
