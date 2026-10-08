@@ -1,0 +1,25 @@
+{
+  "name": "penny-by-propono",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Penny by Propono: chat-first workers' comp premium audit helper. One engine, one answer.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "start": "node src/server/index.ts",
+    "dev": "node --watch src/server/index.ts",
+    "test": "node --test 'test/**/*.test.ts'",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck && npm test"
+  },
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.132.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "typescript": "^7.0.2"
+  }
+}

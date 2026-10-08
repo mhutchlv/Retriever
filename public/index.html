@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Penny by Propono</title>
+  <meta name="description" content="Penny checks workers' comp class codes, estimates your audit bill and gets you ready for the auditor. Every answer shows its work.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;1,700&display=swap">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="Penny by Propono, home">
+      <span class="brand-mark">Penny</span>
+      <span class="brand-by">by Propono</span>
+    </a>
+    <nav class="site-nav" aria-label="Main">
+      <a href="#tools">Free tools</a>
+      <a href="#how">How Penny works</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero" aria-labelledby="hero-title">
+      <p class="eyebrow">Workers' comp audit helper</p>
+      <h1 id="hero-title">Your audit, accurate to the penny.</h1>
+      <p class="lede">Check class codes, estimate your audit bill and get your records ready. Every answer shows the rule and the math behind it.</p>
+    </section>
+
+    <section class="chat" aria-label="Ask Penny">
+      <div id="messages" class="messages" aria-live="polite"></div>
+      <div class="suggestions" id="suggestions">
+        <button type="button" class="chip" data-ask="Class code for janitorial in CA">Class code for janitorial in CA</button>
+        <button type="button" class="chip" data-ask="Compare 8810 in NV and California">Compare 8810 in NV and California</button>
+        <button type="button" class="chip" data-ask="How much will my audit bill be?">Estimate my audit bill</button>
+        <button type="button" class="chip" data-ask="What records do I need for my audit?">What records do I need?</button>
+      </div>
+      <form id="chat-form" class="chat-form">
+        <label for="chat-input" class="visually-hidden">Ask Penny</label>
+        <input id="chat-input" name="message" autocomplete="off" maxlength="4000" placeholder="Ask about class codes, your audit bill, officer payroll or records">
+        <button type="submit" class="btn btn-primary">Ask</button>
+      </form>
+      <p class="fine">Penny gives a neutral first review. Your carrier and auditor make the final decision, and you keep every appeal right your state provides.</p>
+    </section>
+
+    <section id="tools" class="tools" aria-labelledby="tools-title">
+      <p class="eyebrow">Free, no sign-in</p>
+      <h2 id="tools-title">Pick a tool</h2>
+      <div class="tool-grid" id="tool-grid"></div>
+      <div id="tool-panel" class="tool-panel" hidden></div>
+    </section>
+
+    <section id="how" class="how" aria-labelledby="how-title">
+      <p class="eyebrow">One engine, one answer</p>
+      <h2 id="how-title">The same inputs always give the same result</h2>
+      <div class="how-grid">
+        <article>
+          <h3>Locked versions</h3>
+          <p>Every result records its inputs, the rule version in force on your policy date and the engine version. Press Verify on any result to re-run it and confirm it matches.</p>
+        </article>
+        <article>
+          <h3>Results change only with evidence</h3>
+          <p>A different answer needs different facts. Penny shows which figures drive your bill, so you know what is worth documenting.</p>
+        </article>
+        <article>
+          <h3>Your entries are not kept</h3>
+          <p>For the free tools, Penny stores only a fingerprint of each run, never what you typed. Save the receipt if you want to verify a result later.</p>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>Penny is an information tool, not legal or insurance advice. Results are estimates; your carrier's audit governs your bill.</p>
+    <p>© 2026 Propono Systems Inc.</p>
+  </footer>
+
+  <template id="sample-note">
+    <span class="badge badge-warning" title="Built on sample data that has not been checked against the bureau's current filing.">Sample data</span>
+  </template>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
