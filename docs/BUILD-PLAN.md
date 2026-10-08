@@ -21,6 +21,35 @@ Read README.md, docs/ARCHITECTURE.md, docs/DEPLOY-AZURE.md and CLAUDE.md before 
 7. Turn on Claude chat: ANTHROPIC_API_KEY as a Container App secret. First add a per-IP daily message cap, a global daily spend cap with fallback to keyword mode, and a 50-question eval (pricing accuracy, no invented features, no "automation", tools used for every figure, sign-up offered when asked). Disclose chat logging on the page (California two-party consent). DECISION: Mark approves spend cap.
 8. Custom domain with managed certificate. DECISION: which domain (suggest penny.propono.ai).
 
+## Free tools, round 2
+Pure engine tools on public or user-entered data, no model cost. Each follows the CLAUDE.md rules: pure `run()`, bigint money, versioned rule tables, sample data labeled until verified against the source, no NCCI manual text. Research (Oct 2026): auditors gather mainly through NSIPA (nsipa.org: chapters, annual seminar, webinars, vendor and audit-software directories) and the APA designation; no active public Reddit, LinkedIn or Facebook group was found. Free auditor-facing calculators barely exist (ClassCheck, the Massachusetts bureau's tools, carrier PDF guides).
+
+Build first (no overlap with Pro):
+1. GL gross sales adjuster: nets sales tax, freight, returns, finance charges and intercompany sales out of gross receipts. Rules in our own words, no ISO manual text.
+2. Policy-period prorator: fiscal-year, quarterly or calendar payroll converted to the policy term.
+3. Mileage and per diem reasonableness check: reimbursements vs the IRS mileage rate and GSA per diem, versioned by effective date.
+4. Cancellation earned premium: pro-rata and short-rate, short-rate table user-editable.
+5. Estimate-to-final variance worksheet: explains why the final audit differs from the deposit, line by line.
+
+Then:
+6. Remuneration include/exclude lookup: 40 to 60 pay items (tips, per diem, severance, sick pay, 401(k), Section 125) by state, in our own words.
+7. Officer and owner payroll limits by state and effective date (same work as sprint item 6, verified data).
+
+Overlap with Pro (DECISION: Mark chooses the fence; recommended: free single calculation, Pro adds the case workspace, saved history and exports):
+8. Overtime exclusion calculator with state exceptions.
+9. Subcontractor certificate date checker (uninsured portion by payment date).
+10. Payroll tax reconciler (941, 940, state wage reports vs the register).
+11. Multi-state payroll allocator.
+
+Skip for now: experience mod explainer and premium discount tables (NCCI licensed values), field route planner (paid routing API).
+
+Verify before loading (research found these, none confirmed against the source yet): PA executive officer limits $5,400 max and $1,347 min per week; NV annual payroll cap $98,433.60 from 10/1/2026; IRS mileage 72.5 cents from 1/1/2026 and 76 cents from 7/1/2026; PA, DE and NV not allowing the overtime premium exclusion. Each becomes a new rule version with a source per row only after checking the bureau or IRS publication.
+
+Marketing: list Penny in NSIPA's vendor and audit-software directories; offer an NSIPA webinar once round 2 ships.
+
+## The signed-in workspace
+Design target for Phases 2 to 4: `docs/WORKSPACE.md`. One chat-forward workspace that adapts to auditors, audit directors, agencies, bookkeepers and business owners: case status tracking, review and edit of Penny's first pass, an append-only hash-chained timeline of every change, documents with cited extractions, reports and Excel exports from versioned templates, and Penny in an always-open panel that answers audit questions, explains the app as its user manual, and takes actions on the case through the same permission-checked actions as the buttons. DECISIONS listed at the end of that document.
+
 ## Phase 2: Auditors (Pro and Max)
 Goal: paying Pro users and real cost per audit measured.
 - Accounts: email magic-link sign-in (no passwords). Each user is a tenant with full retention under the data terms. Convert early-access leads into invites.
