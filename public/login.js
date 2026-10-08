@@ -4,8 +4,11 @@
   var err = document.getElementById("loginerr");
   var btn = document.getElementById("loginbtn");
 
+  function home(u) { return u && u.role === "business" ? "/insured.html" : "/workspace.html"; }
+
   fetch("/api/auth/me", { credentials: "same-origin" }).then(function (r) {
-    if (r.status === 200) location.replace("/workspace.html");
+    if (r.status !== 200) return null;
+    return r.json().then(function (j) { location.replace(home(j && j.user)); });
   }).catch(function () {});
 
   function showErr(msg) {
@@ -26,7 +29,9 @@
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username: username, password: password })
     }).then(function (r) {
-      if (r.status === 200) { location.href = "/workspace.html"; return null; }
+      if (r.status === 200) {
+        return r.json().catch(function () { return {}; }).then(function (j) { location.href = home(j && j.user); });
+      }
       return r.json().catch(function () { return {}; }).then(function (j) {
         showErr(j.error || "Sign in failed. Try again.");
         btn.disabled = false;

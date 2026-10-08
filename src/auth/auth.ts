@@ -15,12 +15,15 @@ export interface Account {
   role: Role;
   /** "scrypt$<N>$<salt b64>$<hash b64>" */
   passwordHash: string;
+  /** For a business account: the case it can see, as "<auditor username>/<case id>". */
+  linkedCase?: string;
 }
 
 export interface SessionUser {
   username: string;
   displayName: string;
   role: Role;
+  linkedCase?: string;
 }
 
 const KEY_LEN = 64;
@@ -51,7 +54,7 @@ export function accountsFromEnv(raw = process.env.PENNY_USERS): Account[] {
   }
   if (!Array.isArray(list)) return [];
   return list.flatMap((a): Account[] => {
-    const { username, displayName, role, passwordHash } = (a ?? {}) as Partial<Account>;
+    const { username, displayName, role, passwordHash, linkedCase } = (a ?? {}) as Partial<Account>;
     if (typeof username !== "string" || !/^[A-Za-z0-9._-]{3,40}$/.test(username)) return [];
     if (typeof passwordHash !== "string" || !passwordHash.startsWith("scrypt$")) return [];
     return [{
@@ -59,6 +62,7 @@ export function accountsFromEnv(raw = process.env.PENNY_USERS): Account[] {
       displayName: typeof displayName === "string" && displayName ? displayName.slice(0, 60) : username,
       role: ROLES.includes(role as Role) ? (role as Role) : "auditor",
       passwordHash,
+      ...(typeof linkedCase === "string" && /^[A-Za-z0-9._-]{3,40}\/[A-Za-z0-9-]{1,30}$/.test(linkedCase) ? { linkedCase } : {}),
     }];
   });
 }
@@ -84,6 +88,11 @@ export class Auth {
     this.clock = clock;
   }
 
+  /** The display name for a username, for showing people to each other. */
+  displayNameOf(username: string): string | undefined {
+    return this.accounts.get(username.toLowerCase())?.displayName;
+  }
+
   get enabled(): boolean {
     return this.accounts.size > 0;
   }
@@ -103,7 +112,7 @@ export class Auth {
     }
     this.fails.delete(key);
     const token = randomBytes(32).toString("base64url");
-    const user = { username: account.username, displayName: account.displayName, role: account.role };
+    const user: SessionUser = { username: account.username, displayName: account.displayName, role: account.role, ...(account.linkedCase ? { linkedCase: account.linkedCase } : {}) };
     this.sessions.set(sha(token), { user, expires: now + SESSION_MS });
     if (this.sessions.size > 5000) this.sweep(now);
     return { ok: true, token, user };

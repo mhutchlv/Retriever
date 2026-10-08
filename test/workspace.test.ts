@@ -213,3 +213,75 @@ describe("subcontractor certificates", () => {
     assert.ok(store.get("tester", "DRL-2026")!.subs[2]!.coiRequestedAt);
   });
 });
+
+describe("insured portal", () => {
+  const owner = { username: "tester", displayName: "Test Auditor", role: "auditor" as const, passwordHash: hashPassword(PASSWORD) };
+  const insured = { username: "biz", displayName: "Dana Kessler", role: "business" as const, passwordHash: hashPassword(PASSWORD), linkedCase: "tester/SRR-2026" };
+  const store = new WorkspaceStore();
+  const app = createApp({ runLog: new MemoryRunLog(), leads: new MemoryLeadSink(), useModel: false, auth: new Auth([owner, insured]), workspace: store });
+  let base = "";
+  let cookie = "";
+  before(async () => {
+    await new Promise<void>((r) => app.listen(0, "127.0.0.1", r));
+    base = `http://127.0.0.1:${(app.address() as AddressInfo).port}`;
+    const res = await fetch(base + "/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: "biz", password: PASSWORD }) });
+    cookie = res.headers.get("set-cookie")!.split(";")[0]!;
+  });
+  after(() => new Promise<void>((r) => app.close(() => r())));
+  const post = (path: string, body: unknown) =>
+    fetch(base + path, { method: "POST", headers: { "Content-Type": "application/json", Cookie: cookie }, body: JSON.stringify(body) });
+  const get = (path: string) => fetch(base + path, { headers: { Cookie: cookie } });
+
+  it("keeps a business account out of the auditor workspace", async () => {
+    assert.equal((await get("/api/workspace/cases")).status, 403);
+    assert.equal((await get("/api/workspace/cases/SRR-2026")).status, 403);
+  });
+
+  it("shows only the insured's side of the case", async () => {
+    const v = await (await get("/api/insured/case")).json();
+    assert.equal(v.business.name, "Summit Ridge Roofing Inc.");
+    assert.equal(v.stage.current, "Gathering records");
+    assert.equal(v.lines, undefined);
+    assert.equal(v.findings, undefined);
+    assert.ok(v.checklist.counts.required > 0);
+    assert.equal(v.canSubmit, false);
+  });
+
+  it("adds checklist items when answers call for them", async () => {
+    const before = (await (await get("/api/insured/case")).json()).checklist.groups.map((g: { group: string }) => g.group);
+    assert.ok(!before.includes("Subcontractors"));
+    const v = await (await post("/api/insured/answers", { answers: { usesSubcontractors: true, hasOvertime: false, hasCasualLabor: false, multiState: false } })).json();
+    assert.ok(v.checklist.groups.some((g: { group: string }) => g.group === "Subcontractors"));
+  });
+
+  it("records file names only, shows them to the auditor, and lets the insured take one back", async () => {
+    const v = await (await post("/api/insured/upload", { item: "form-941", files: [{ name: "941 Q4 2025.pdf", size: 120000, type: "application/pdf" }] })).json();
+    const item = v.checklist.groups.flatMap((g: { items: { id: string }[] }) => g.items).find((i: { id: string }) => i.id === "form-941");
+    assert.equal(item.status, "received");
+    const docId = item.files[0].id;
+    const c = store.get("tester", "SRR-2026")!;
+    const d = c.documents.find((x) => x.id === docId)!;
+    assert.equal(d.uploadedBy, "Dana Kessler");
+    assert.equal(c.timeline.at(-1)!.via, "insured");
+    assert.equal(verifyTimeline(c).ok, true);
+    const after = await (await post(`/api/insured/files/${docId}/remove`, {})).json();
+    assert.equal(after.checklist.groups.flatMap((g: { items: { id: string; status: string }[] }) => g.items).find((i: { id: string }) => i.id === "form-941").status, "needed");
+  });
+
+  it("refuses to send until the list is complete, then moves the audit to Records received", async () => {
+    assert.equal((await post("/api/insured/submit", {})).status, 400);
+    let v = await (await get("/api/insured/case")).json();
+    for (const g of v.checklist.groups) for (const i of g.items) {
+      if (i.priority === "required" && i.status === "needed") await post("/api/insured/upload", { item: i.id, files: [{ name: `${i.id}.pdf`, size: 1000, type: "application/pdf" }] });
+    }
+    v = await (await post("/api/insured/submit", {})).json();
+    assert.ok(v.submittedAt);
+    assert.equal(v.stage.current, "Ready for auditor");
+    assert.equal(store.get("tester", "SRR-2026")!.status, "Records received");
+  });
+
+  it("rejects oversized files and unknown items", async () => {
+    assert.equal((await post("/api/insured/upload", { item: "form-941", files: [{ name: "x.pdf", size: 60 * 1024 * 1024, type: "" }] })).status, 400);
+    assert.equal((await post("/api/insured/upload", { item: "nope", files: [{ name: "x.pdf", size: 1, type: "" }] })).status, 400);
+  });
+});

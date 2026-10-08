@@ -111,7 +111,22 @@ export interface Doc {
   name: string;
   type: string;
   period: string;
-  pages: number;
+  pages?: number;
+  /** Set on files the insured added through the audit portal. */
+  checklistItem?: string;
+  uploadedBy?: string;
+  uploadedAt?: string;
+  /** Bytes, as reported by the browser. The preview never receives the file itself. */
+  size?: number;
+  fileType?: string;
+  /** Withdrawn by the insured. Kept as a tombstone so the history stays whole. */
+  removed?: boolean;
+}
+
+/** The insured's side of the case: answers to the intake questions and when they sent everything. */
+export interface Intake {
+  answers: Record<string, boolean>;
+  submittedAt?: string;
 }
 
 export interface Finding {
@@ -126,7 +141,7 @@ export interface TimelineEvent {
   seq: number;
   at: string;
   actor: string;
-  via: "workspace" | "penny";
+  via: "workspace" | "penny" | "insured";
   action: string;
   summary: string;
   target?: string;
@@ -172,6 +187,7 @@ export interface Case {
   documents: Doc[];
   findings: Finding[];
   notes: { at: string; author: string; text: string }[];
+  intake?: Intake;
   timeline: TimelineEvent[];
 }
 

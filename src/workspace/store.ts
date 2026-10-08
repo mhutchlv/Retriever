@@ -347,6 +347,28 @@ export class WorkspaceStore {
     return event;
   }
 
+  /**
+   * Change a case outside the auditor's action set (the insured's portal). The
+   * change function edits a working copy and describes the event; the case is
+   * replaced only if it succeeds, and the event joins the same hash chain.
+   */
+  update(
+    username: string,
+    id: string,
+    actor: string,
+    via: TimelineEvent["via"],
+    change: (c: Case) => { action: string; summary: string; target?: string; before?: Record<string, unknown>; after?: Record<string, unknown> },
+  ): TimelineEvent {
+    const c = this.require(username, id);
+    const work = structuredClone(c);
+    const m = change(work);
+    const event = appendEvent(work, { at: new Date().toISOString(), actor, via, ...m });
+    const list = this.cases(username);
+    list[list.indexOf(c)] = work;
+    this.save();
+    return event;
+  }
+
   /** Put the sample cases back to their starting point. */
   reset(username: string) {
     delete this.data[username.toLowerCase()];

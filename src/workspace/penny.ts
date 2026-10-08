@@ -95,7 +95,7 @@ function caseContext(c: Case, tenant: string): string {
     officers: c.officers.map((o, i) => ({ ...o, counted: t.officers.people[i]!.countedPayroll.display, why: t.officers.people[i]!.reason })),
     officerRules: { limits: t.officers.limits, stateRules: t.officers.stateRules, warnings: t.officers.warnings },
     subs: c.subs.map((s) => ({ ...s, certificateCoverage: t.subs[s.id] })),
-    documents: c.documents,
+    documents: c.documents.filter((d) => !d.removed),
     findings: c.findings,
     payrollByClass: t.byClass.map((b) => ({ class: b.classCode, title: b.title, employees: b.employees.display, officers: b.officers.display, uninsuredSubs: b.uninsuredSubs.display, total: b.payroll.display, estimatedAtBinding: b.estimated?.display })),
     premium: t.estimate

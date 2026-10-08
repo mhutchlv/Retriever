@@ -4,19 +4,19 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Workspace | Penny by Propono</title>
+<title>Your audit | Penny by Propono</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&amp;family=IBM+Plex+Mono:wght@500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="penny.css">
 <link rel="stylesheet" href="workspace.css?v=20261008d">
+<link rel="stylesheet" href="insured.css?v=20261008d">
 </head>
-<body class="wsapp">
+<body class="wsapp insapp">
 <header class="wstop">
-<button class="iconbtn railtoggle" id="railbtn" type="button" aria-expanded="false" aria-controls="rail">My work</button>
-<a class="brand" href="index.html">
+<a class="brand" href="insured.html">
 <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="15" fill="none" stroke="#A9481F" stroke-width="2.5"/><circle cx="17" cy="17" r="10" fill="none" stroke="#A9481F" stroke-width="1.2"/><path d="M14 23V11h4.2a3.4 3.4 0 0 1 0 6.8H14" fill="none" stroke="#A9481F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-<b>Penny</b><small>Workspace</small>
+<b>Penny</b><small>Audit portal</small>
 </a>
 <span class="pill">Preview · sample data only</span>
 <span class="spacer"></span>
@@ -24,30 +24,14 @@
 <button class="btn ghost sm" id="signout" type="button">Sign out</button>
 </header>
 <div class="wsgrid">
-<aside class="rail" id="rail" aria-label="My work">
-<h2 class="railh">My work</h2>
-<dl class="counts" id="counts"></dl>
-<h3 class="railh2">Cases</h3>
-<div class="casetools">
-<label class="sr" for="casesearch">Search cases</label>
-<input id="casesearch" type="search" placeholder="Search cases" autocomplete="off">
-<label class="castsort" for="casesort">Sort by
-<select id="casesort">
-<option value="due" selected>Next due</option>
-<option value="alpha">Alphabetical</option>
-<option value="recent">Recently opened</option>
-</select></label>
-</div>
-<ul class="caselist" id="caselist"></ul>
-<p class="railfoot"><button class="linkbtn" id="resetbtn" type="button">Reset sample data</button><br><a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a></p>
-</aside>
 <main class="center" id="center" tabindex="-1">
-<p class="muted pad">Loading…</p>
+<div class="callout info previewnote" role="note"><b>This is a preview with sample data.</b> Files you pick stay on your computer: only the file name and size are recorded. Please don't use real payroll records.</div>
+<div id="app"><p class="muted pad">Loading your audit…</p></div>
 </main>
 <aside class="penny" id="penny" aria-label="Penny">
 <div class="pennyhead">
 <span class="avatar" aria-hidden="true">P</span>
-<div><b>Penny</b><div class="small muted">Knows this case</div></div>
+<div><b>Penny</b><div class="small muted">Ask about your audit</div></div>
 <button class="iconbtn sheetclose" id="sheetclose" type="button" aria-label="Close Penny">Close</button>
 </div>
 <div class="log" id="log" role="log" aria-live="polite"></div>
@@ -55,15 +39,15 @@
 <div class="chips" id="chips"></div>
 <form class="inrow" id="chatform">
 <label class="sr" for="chatin">Message Penny</label>
-<textarea id="chatin" rows="2" maxlength="4000" placeholder="Ask about this case or request a change"></textarea>
+<textarea id="chatin" rows="2" maxlength="4000" placeholder="Type your question"></textarea>
 <button class="send" type="submit" aria-label="Send">Send</button>
 </form>
-<p class="small muted">Penny suggests; you apply. Every change is recorded.</p>
+<p class="small muted">Penny gives a neutral first review, not legal or tax advice.</p>
 </div>
 </aside>
 </div>
 <button class="fab" id="fab" type="button">Ask Penny</button>
 <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
-<script src="workspace.js?v=20261008d"></script>
+<script src="insured.js?v=20261008d"></script>
 </body>
 </html>

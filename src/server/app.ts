@@ -11,6 +11,7 @@ import { ENGINE_VERSION } from "../engine/version.ts";
 import type { LeadSink } from "../leads/store.ts";
 import { Auth, clearedCookie, readCookie, SESSION_COOKIE, sessionCookie, type SessionUser } from "../auth/auth.ts";
 import { workspaceChat } from "../workspace/penny.ts";
+import { insuredChat, insuredView, linkedCase, removeFile, saveAnswers, submit as submitRecords, upload as insuredUpload } from "../workspace/insured.ts";
 import { computeCase, type Case } from "../workspace/model.ts";
 import { coiRequestText, reportHtml, worksheetCsv } from "../workspace/exports.ts";
 import { parseAction, tenantFor, verifyTimeline, WorkspaceStore } from "../workspace/store.ts";
@@ -268,6 +269,56 @@ export function createApp({
       if (!actionLimiter.allow(user.username)) throw new HttpError(429, "Too many changes in a minute. Slow down a little.");
     }
 
+    // A business account sees only its own audit, through the insured portal.
+    if (path.startsWith("/api/insured/")) {
+      if (user.role !== "business" || !user.linkedCase) throw new HttpError(403, "This account doesn't have an audit portal.");
+      const { owner, caseId } = linkedCase(user);
+      const view = () => {
+        const c = workspace.get(owner, caseId);
+        if (!c) throw new HttpError(404, "Your audit isn't available right now.");
+        const { view: v, run } = insuredView(c, user, owner, auth.displayNameOf(c.assignee) ?? c.assignee);
+        const [r] = receiptsOf([run]);
+        return { ...v, receipt: { runId: r!.runId, fingerprint: r!.fingerprint, dataStatus: r!.dataStatus } };
+      };
+      if (method === "GET" && path === "/api/insured/case") return send(res, 200, view());
+      if (method === "POST" && path === "/api/insured/upload") {
+        insuredUpload(workspace, user, await readJson(req));
+        return send(res, 200, view());
+      }
+      const rm = path.match(/^\/api\/insured\/files\/(D\d{1,4})\/remove$/);
+      if (method === "POST" && rm) {
+        removeFile(workspace, user, rm[1]!);
+        return send(res, 200, view());
+      }
+      if (method === "POST" && path === "/api/insured/answers") {
+        saveAnswers(workspace, user, await readJson(req));
+        return send(res, 200, view());
+      }
+      if (method === "POST" && path === "/api/insured/submit") {
+        submitRecords(workspace, user);
+        return send(res, 200, view());
+      }
+      if (method === "POST" && path === "/api/insured/chat") {
+        if (!chatLimiter.allow(clientKey(req, trustProxy))) throw new HttpError(429, "Too many messages. Try again in a minute.");
+        const history = parseHistory(await readJson(req));
+        if (!useModel) return send(res, 200, { reply: "Penny's assistant isn't connected on this server. Your checklist and uploads still work." });
+        const ticket = budget.begin(`user:${user.username.toLowerCase()}`);
+        if (!ticket.ok) return send(res, 200, { reply: fallbackNotice(ticket.reason) });
+        const cost: ModelCost = { micros: 0, calls: 0 };
+        try {
+          const out = await insuredChat(history, user, workspace, cost);
+          return send(res, 200, { reply: out.reply });
+        } catch (err) {
+          console.error("insured chat failed", err);
+          return send(res, 200, { reply: "Penny couldn't answer just now. Try again in a moment." });
+        } finally {
+          budget.finish(ticket.visitor, cost.micros, cost.calls);
+        }
+      }
+      throw new HttpError(404, "Not found.");
+    }
+    if (user.role === "business") throw new HttpError(403, "This account uses the audit portal.");
+
     if (method === "GET" && path === "/api/workspace/cases") {
       return send(res, 200, { user, cases: workspace.cases(user.username).map((c) => caseSummary(user, c)) });
     }
@@ -338,7 +389,7 @@ export function createApp({
       return send(res, 200, { ok: true, engineVersion: ENGINE_VERSION, chat: useModel ? "model" : "rules" });
     }
 
-    if (path.startsWith("/api/auth/") || path.startsWith("/api/workspace/")) {
+    if (path.startsWith("/api/auth/") || path.startsWith("/api/workspace/") || path.startsWith("/api/insured/")) {
       return handleWorkspace(req, res, path, method);
     }
 

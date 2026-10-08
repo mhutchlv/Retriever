@@ -456,9 +456,13 @@
   function chip(r) { return '<button type="button" class="refchip" data-act="ref" data-ref="' + esc(r) + '">' + esc(r) + "</button>"; }
 
   function tabDocuments() {
-    return '<div class="callout info">Uploads are off in the preview. Documents here are sample records.</div>' +
-      table(["Document", "Type", "Period", "#Pages", "Cited by"], (C().documents || []).map(function (d) {
-        return '<tr data-rowid="' + esc(d.id) + '"><td><b>' + esc(d.id) + "</b> " + esc(d.name) + "</td><td>" + esc(d.type) + "</td><td>" + esc(d.period) + '</td><td class="num">' + esc(d.pages) + "</td><td>" + (citedBy(d.id).map(chip).join("") || '<span class="muted">Nothing yet</span>') + "</td></tr>";
+    var docs = (C().documents || []).filter(function (d) { return !d.removed; });
+    var fromInsured = docs.filter(function (d) { return d.uploadedBy; }).length;
+    return '<div class="callout info">Documents here are sample records. Files the insured adds in the audit portal show here with their name and size only; the preview never stores the files themselves.</div>' +
+      (fromInsured ? '<p class="small">' + fromInsured + " file" + (fromInsured === 1 ? "" : "s") + " from the insured's portal.</p>" : "") +
+      table(["Document", "Type", "Period", "#Pages", "Cited by"], docs.map(function (d) {
+        var who = d.uploadedBy ? '<div class="small"><span class="spill sample">From the insured</span> ' + esc(d.uploadedBy) + (d.uploadedAt ? ", " + esc(fmtTime(d.uploadedAt)) : "") + (d.size ? " · " + esc(Math.max(1, Math.round(d.size / 1024))) + " KB" : "") + "</div>" : "";
+        return '<tr data-rowid="' + esc(d.id) + '"><td><b>' + esc(d.id) + "</b> " + esc(d.name) + who + "</td><td>" + esc(d.type) + "</td><td>" + esc(d.period) + '</td><td class="num">' + esc(d.pages != null ? d.pages : "—") + "</td><td>" + (citedBy(d.id).map(chip).join("") || '<span class="muted">Nothing yet</span>') + "</td></tr>";
       }));
   }
 
@@ -758,6 +762,7 @@
 
   /* ---------- start ---------- */
   api("/api/auth/me").then(function (me) {
+    if (me.user && me.user.role === "business") { location.replace("/insured.html"); return new Promise(function () {}); }
     S.user = me.user;
     $("who").textContent = me.user.displayName || me.user.username;
     return api("/api/workspace/cases");
