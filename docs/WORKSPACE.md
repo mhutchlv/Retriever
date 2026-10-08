@@ -66,7 +66,7 @@ One status model per case, shown as a stepper with the next action called out. S
 
 **Business side (owner, agency, bookkeeper):** Audit notice received → Gathering records (checklist) → Ready for auditor → Audit in progress → Bill received → Reviewing → Accepted, or Disputed → Under auditor review → Resolved.
 
-**Disputes (per line):** Raised → Penny's first review → Waiting on evidence → With auditor → Approved, Denied or Partly approved → Bill regenerated.
+**Disputes (per line):** available when the carrier runs the dispute module (enterprise) or through paid Audit Review once legal review clears it. Raised → Penny's first review → Waiting on evidence → With auditor → Approved, Denied or Partly approved → Bill regenerated.
 
 Every status change is a timeline event with who, when and why. Due dates and aging drive the work queue and the director's dashboard.
 
@@ -87,7 +87,7 @@ The timeline is append-only and tamper-evident.
 - Each event records actor (person, or Penny acting for a named person), time, the change as before and after, the reason, and links to the chat message, document page or engine run behind it.
 - Events are hash-chained per case, so an edited history is detectable. The run fingerprints already in the engine carry through, so any figure in any report can be traced to the exact inputs and rule versions.
 - Undo is a new event that reverses an earlier one; nothing is deleted. Deletion of documents for retention reasons leaves a tombstone event.
-- The timeline exports with the case (PDF and CSV) for carrier files, disputes and SOC 2 evidence.
+- Every plan sees the full timeline in the app. Audit-trail export (PDF and CSV, for carrier files and SOC 2 evidence) is an enterprise feature, per the Pro guardrails in the Propono context.
 
 ## Penny in the workspace
 
@@ -114,7 +114,7 @@ Penny is three things in one panel: the audit assistant, the operator of the wor
 
 | | Auditor | Director | Agency / bookkeeper | Business owner |
 | --- | --- | --- | --- | --- |
-| Home | My queue: due this week, waiting on records, flags to clear, disputes assigned | Team board: by auditor and status, aging, overdue, disputes, returned for revision | Client board: every client's audit status and next date | My audit: status, checklist, what to do next |
+| Home | My queue: due this week, waiting on records, flags to clear, disputes assigned | Team board: by auditor and status, aging, overdue, disputes, returned for revision; Review Focus tab (Review Depth: Full review to Light review, Cleared Without Changes, Low-Touch Categories) | Client board: every client's audit status and next date | My audit: status, checklist, what to do next |
 | Worksheet | Full edit | View, comment, approve or return | View; edit before submission when the client authorizes | View final lines with plain-language explanations |
 | Documents | All case documents | All | Their clients' uploads and the final audit | Their own uploads and the final audit |
 | Findings | Create, accept, reject | Review quality | See items that affect the client | See items with dollar impact and what would fix them |
@@ -144,6 +144,13 @@ Penny is three things in one panel: the audit assistant, the operator of the wor
 - Roles and permissions per workspace; per-case sharing (a business sees its own case; its agency sees it if invited; the auditor and director see their carrier's cases).
 - Magic-link sign-in first; SSO (Entra, Okta, SAML) for carrier tenants.
 - Audit trail export and access reviews feed SOC 2 evidence.
+
+## Existing work to build on
+
+- Director dashboard prototype (Berkley demo, Aug 2026): Review Focus tab and its vocabulary, floating "Ask Propono" panel. Reuse the vocabulary; the panel becomes Penny.
+- Insured intake wizard (5 steps: who is completing the audit, required documents, quick questions, document-informed questions such as the 941 vs payroll journal gap, subcontractor COIs, casual labor and multi-state split, then follow-up items). This is the starting point for the business-owner and agency intake.
+- Auditor Workspace demo at proponoaudit.com/demo: review before rebuilding.
+- Enterprise-only per the Pro guardrails: director console, integrations, custom model, SSO, audit-trail export, dispute portal.
 
 ## Build order
 
