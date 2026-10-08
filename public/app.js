@@ -401,7 +401,7 @@
   // ---------- sign-up ----------
 
   var ROLE_OPTIONS = [["business", "A business being audited"], ["auditor", "A premium auditor"], ["agency_or_partner", "An agency, bookkeeper or partner"], ["insurer", "An insurer or audit firm"], ["other", "Something else"]];
-  var INTEREST_OPTIONS = [["free_account", "Free account"], ["pro", "Pro"], ["max", "Max"], ["team", "Team"], ["audit_ready", "Audit Ready"], ["audit_review", "Audit Review"], ["partner", "Partner plans"], ["insurer_demo", "Insurer walkthrough"], ["other", "Just talk to the team"]];
+  var INTEREST_OPTIONS = [["free_account", "Free account"], ["pro", "PennyPro"], ["max", "PennyMax"], ["team", "Extra seats for my team"], ["enterprise", "Enterprise"], ["audit_ready", "Audit Ready"], ["audit_review", "Audit Review"], ["partner", "Partner or white-label"], ["insurer_demo", "Insurer walkthrough"], ["other", "Just talk to the team"]];
 
   function select(name, options, value) {
     var sel = el("select");
@@ -539,13 +539,13 @@
     auditor_pro: function () {
       var W;
       return {
-        title: "Penny Pro · Basin Electric Inc. audit (sample)",
+        title: "PennyPro · Basin Electric Inc. audit (sample)",
         steps: [
           { title: "Forward the documents", async body() {
             return ["The insured's documents arrive at your Penny intake address: four quarterly 941s, a payroll register for 14 employees, the general ledger and three subcontractor certificates. Penny reads and files each one."];
           } },
           { title: "Reconcile", async body() {
-            return ["Payroll register total: $1,182,400. Wages on the four 941s: $1,182,400. They match, so the register can be relied on.\n\n(Illustration: the signed-in 941 check arrives with Pro.)"];
+            return ["Payroll register total: $1,182,400. Wages on the four 941s: $1,182,400. They match, so the register can be relied on.\n\n(Illustration: the signed-in 941 check arrives with PennyPro.)"];
           } },
           { title: "Drafted worksheet", async body() {
             W = await runTool("audit_bill_estimator", { state: "NV", policyEffectiveDate: "2026-01-01", experienceMod: "0.91", lines: [
@@ -559,7 +559,7 @@
             return ["You review, edit any line, and sign off. Your decision is final; Penny keeps the record of every source and change."];
           } },
         ],
-        cta: ["Sign up for Pro", "Plans and pricing"],
+        cta: ["Sign up for PennyPro", "Plans and pricing"],
       };
     },
   };
@@ -684,4 +684,11 @@
   reset();
   // index.html#talk opens the contact form (linked from the privacy and terms pages).
   if (location.hash === "#talk") setTimeout(function () { showSignup("other"); }, 800);
+  // Plan buttons in the pricing section open the same form with that plan chosen.
+  document.querySelectorAll("[data-plan]").forEach(function (a) {
+    a.addEventListener("click", function (e) {
+      e.preventDefault();
+      showSignup(a.getAttribute("data-plan"));
+    });
+  });
 })();

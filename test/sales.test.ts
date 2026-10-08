@@ -9,13 +9,16 @@ const route = (text: string) => routeMessage(text, "public");
 
 describe("homepage salesperson (rules mode)", () => {
   it("answers pricing from the plan facts", () => {
-    const r = route("How much is Penny Pro?");
-    assert.match(r.reply, /\$99 a month with 30 audits/);
+    const r = route("How much is PennyPro?");
+    assert.match(r.reply, /PennyPro: \$199 a month/);
+    assert.match(r.reply, /PennyMax: \$399 a month/);
+    assert.match(r.reply, /not per audit/);
     assert.match(r.reply, /early access/);
   });
 
   it("starts sign-up with the right interest", () => {
     assert.deepEqual(route("I want to sign up for Max").signup, { interest: "max" });
+    assert.deepEqual(route("sign me up for PennyPro").signup, { interest: "pro" });
     assert.deepEqual(route("Book an insurer demo").signup, { interest: "insurer_demo" });
     assert.deepEqual(route("Become a partner").signup, { interest: "partner" });
     assert.deepEqual(route("Request the SOC 2 report").signup, { interest: "other" });

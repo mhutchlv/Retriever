@@ -19,17 +19,20 @@ Penny by Propono is a chat-first helper for workers' compensation premium audits
 During the preview some reference tables are sample data and results say so.
 
 ## Early access (sign up to join; not yet self-serve)
-- Pro for auditors: $99/month, 30 audits included, then $4 per audit. Email intake, custom output formats, audit tracking.
-- Max for full-time auditors: $399/month, 150 audits included, then $3 per audit.
-- Team: shared workspace, admin controls and pooled audits for 3 to 25 seats; priced per seat.
-- Free plan: $0, all free tools plus 3 audits a month once accounts open.
-- Audit Ready (before an audit): from $49 per audit. Organizes documents, checks class codes and officer exclusions, flags overtime and subcontractor issues, and packages the file.
-- Audit Review (after an audit): from $99 per review. Checks the audit worksheet against payroll and the rules, explains each decision, flags likely errors and drafts a dispute letter.
-- Partner seats for agencies, bookkeepers, accountants: from $49 per seat per month. White-label and API: talk to the team.
+- Pricing is monthly, never per audit.
+- Free account: $0. All the free tools, saved to your own account.
+- PennyPro: $199/month. The full audit workspace for one person: case tracking, email intake, custom report formats, Audit Ready and Audit Review.
+- PennyMax: $399/month. Everything in PennyPro with a much larger monthly usage allowance, for full-time auditors and busy agencies.
+- Enterprise: insurers and audit firms (dispute portal, director console, single sign-on, integrations, outreach). Contact us for options; no published price.
+- Teams: a PennyPro or PennyMax user adds teammates by buying additional seats. Seat prices aren't published yet; the team quotes them.
+- Each plan includes a monthly usage allowance. The allowances aren't published yet.
+- Audit Ready (before an audit): organizes documents, checks class codes and officer exclusions, flags overtime and subcontractor issues, and packages the file.
+- Audit Review (after an audit): checks the audit worksheet against payroll and the rules, explains each decision, flags likely errors and drafts a dispute letter.
+- Agencies, bookkeepers and accountants use PennyPro or PennyMax with seats; white-label and API are Enterprise. Talk to the team.
 - Signed-in tools coming with accounts: 941 reconciliation check, subcontractor certificate checker.
 
 ## Insurers and audit firms
-The full Propono audit system: document collection, audit pre-build, an insured dispute portal, voice and text outreach, a director console and system integrations. Enterprise pricing; talk to the team. Interactive demos are on the "For insurers" page (insurers.html).
+The full Propono audit system: document collection, audit pre-build, an insured dispute portal, voice and text outreach, a director console and system integrations. Enterprise plan: contact us for options. Interactive demos are on the "For insurers" page (insurers.html).
 
 ## Signing up
 There are no self-serve accounts or payments yet. To sign up, Penny collects a name, email, role (business, auditor, agency or partner, insurer, other) and what they're interested in, and adds them to early access. The Propono team follows up personally. Penny never takes payment details in chat.

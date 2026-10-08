@@ -14,7 +14,7 @@ export const DEMOS = {
     pitch: "See how Penny builds a sample business's document list, tracks what's in, and packages the file for the auditor.",
   },
   auditor_pro: {
-    title: "Penny Pro: a drafted audit worksheet for auditors",
+    title: "PennyPro: a drafted audit worksheet for auditors",
     pitch: "Forward a sample audit's documents and see the drafted worksheet: payroll split by class, every figure tied to its source and rule.",
   },
 } as const;
@@ -36,23 +36,21 @@ export interface SalesReply {
 
 const PRICING =
   "Here's how Penny is priced:\n\n" +
-  "Free: $0. All four free tools today, no login. Once accounts open, 3 audits a month.\n" +
-  "Pro, for auditors: $99 a month with 30 audits, then $4 each.\n" +
-  "Max, for full-time auditors: $399 a month with 150 audits, then $3 each.\n" +
-  "Team: shared workspace and pooled audits, priced per seat.\n" +
-  "For businesses: Audit Ready from $49 per audit, Audit Review from $99 per review.\n" +
-  "Partners: seats from $49 a month; white-label and API by conversation.\n" +
-  "Insurers: the full Propono audit system, priced with the team.\n\n" +
-  "The free tools are live now. Paid plans are in early access: I can add you to the list.";
+  "Free account: $0. All the free tools, saved to your own account.\n" +
+  "PennyPro: $199 a month. The full audit workspace for one person, including Audit Ready and Audit Review.\n" +
+  "PennyMax: $399 a month. Everything in PennyPro with a much larger monthly usage allowance.\n" +
+  "Enterprise: for insurers and audit firms. Contact us for options.\n\n" +
+  "Plans are monthly, not per audit. PennyPro and PennyMax users add teammates by buying extra seats. Paid plans are in early access: I can add you to the list.";
 
 function interestFrom(lower: string): Lead["interest"] {
-  if (/\bmax\b/.test(lower)) return "max";
-  if (/\bpro\b/.test(lower)) return "pro";
-  if (/\bteam\b/.test(lower)) return "team";
+  if (/\b(penny ?)?max\b/.test(lower)) return "max";
+  if (/\b(penny ?)?pro\b/.test(lower)) return "pro";
+  if (/\bteam|\bseats?\b/.test(lower)) return "team";
   if (/ready/.test(lower)) return "audit_ready";
   if (/review|dispute/.test(lower)) return "audit_review";
   if (/partner|agency|bookkeep|accountant|white.?label|api/.test(lower)) return "partner";
-  if (/insurer|carrier|enterprise/.test(lower)) return "insurer_demo";
+  if (/enterprise/.test(lower)) return "enterprise";
+  if (/insurer|carrier/.test(lower)) return "insurer_demo";
   if (/free/.test(lower)) return "free_account";
   return "other";
 }
@@ -86,11 +84,11 @@ export function salesIntent(lower: string): SalesReply | null {
     }
     return {
       reply: "Which would you like to see?\n\n" + Object.values(DEMOS).map((d) => `${d.title}. ${d.pitch}`).join("\n\n"),
-      suggestions: ["Watch the Audit Review demo", "Watch the Audit Ready demo", "Watch the Penny Pro demo"],
+      suggestions: ["Watch the Audit Review demo", "Watch the Audit Ready demo", "Watch the PennyPro demo"],
     };
   }
 
-  if (/pric|\bplans?\b|subscription|per seat|\bpro\b|\bmax\b|how much (is|does|do) (penny|it|pro|max|a plan|plans|the)|is (it|penny) free|cost of penny|penny cost/.test(lower)) {
+  if (/pric|\bplans?\b|subscription|per seat|\bseats?\b|enterprise|\b(penny ?)?pro\b|\b(penny ?)?max\b|how much (is|does|do) (penny|it|pro|max|a plan|plans|the)|is (it|penny) free|cost of penny|penny cost/.test(lower)) {
     return { reply: PRICING, suggestions: ["Sign up for early access", "Watch a demo"] };
   }
 
@@ -105,7 +103,7 @@ export function salesIntent(lower: string): SalesReply | null {
   if (/agency|agencies|\bagent\b|\bbroker|bookkeep|accountant|\bcpa\b|payroll (provider|company)|partner (program|plans?|seats?)|white.?label|\bapi\b|resell/.test(lower)) {
     return {
       reply:
-        "Partners run Penny for many clients: insurance agencies, bookkeepers, accountants and payroll providers. Offer Audit Ready and Audit Review under your name, manage every client from one dashboard, or connect payroll data so audits start complete. Partner seats start at $49 a month; white-label and API by conversation.",
+        "Partners run Penny for many clients: insurance agencies, bookkeepers, accountants and payroll providers. Offer Audit Ready and Audit Review under your name, manage every client from one dashboard, or connect payroll data so audits start complete. Use PennyPro or PennyMax and add seats for your team; white-label and API are Enterprise, by conversation.",
       suggestions: ["Become a partner", "Watch the Audit Ready demo"],
     };
   }
@@ -128,7 +126,7 @@ export function salesIntent(lower: string): SalesReply | null {
   if (/audit review|dispute|disagree|wrong|mistake|error|too high|unfair|appeal|overcharg/.test(lower)) {
     return {
       reply:
-        "Audit Review gives your audit a neutral first review: Penny checks each line against your payroll and the rules, explains every decision, flags likely errors and drafts a dispute letter. It's in early access from $99 per review. You can re-run the math now with the free estimator, or watch the demo. You keep every appeal right your state provides.",
+        "Audit Review gives your audit a neutral first review: Penny checks each line against your payroll and the rules, explains every decision, flags likely errors and drafts a dispute letter. It's part of PennyPro and PennyMax, in early access. You can re-run the math now with the free estimator, or watch the demo. You keep every appeal right your state provides.",
       suggestions: ["Watch the Audit Review demo", "Estimate my audit bill", "Sign up for Audit Review"],
     };
   }

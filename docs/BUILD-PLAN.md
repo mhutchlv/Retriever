@@ -52,10 +52,11 @@ Marketing: list Penny in NSIPA's vendor and audit-software directories; offer an
 ## The signed-in workspace
 Design target for Phases 2 to 4: `docs/WORKSPACE.md`. One chat-forward workspace that adapts to auditors, audit directors, agencies, bookkeepers and business owners: case status tracking, review and edit of Penny's first pass, an append-only hash-chained timeline of every change, documents with cited extractions, reports and Excel exports from versioned templates, and Penny in an always-open panel that answers audit questions, explains the app as its user manual, and takes actions on the case through the same permission-checked actions as the buttons. DECISIONS listed at the end of that document.
 
-## Phase 2: Auditors (Pro and Max)
-Goal: paying Pro users and real cost per audit measured.
+## Phase 2: Auditors (PennyPro and PennyMax)
+Goal: paying PennyPro users and real model cost per user measured.
 - Accounts: email magic-link sign-in (no passwords). Each user is a tenant with full retention under the data terms. Convert early-access leads into invites.
-- Billing: Stripe subscriptions with metered audits (Pro $99 incl. 30 then $4; Max $399 incl. 150 then $3). An "audit" is a case object; meter on finalized cases. Free plan: 3 audits a month.
+- Pricing (Mark, 2026-10-08): Free account $0; PennyPro $199/month; PennyMax $399/month; Enterprise, contact us for options. Monthly, never per audit: users may not use the features the same way when their whole company isn't on the platform. PennyPro and PennyMax users add teammates by buying additional seats (seat price to set).
+- Billing: Stripe subscriptions plus a seat quantity. Each plan gets a monthly usage allowance measured in model tokens, set from our real model costs (the chat budget's per-call cost logging is the starting point). DECISION: Mark to set the allowance per plan and the seat price once cost per user is measured.
 - Audit workspace: a case holds documents, extracted data, worksheet, and every engine run.
 - Document intake: upload plus a unique email intake address per user. Claude reads PDFs (payroll registers, 941s, COIs, policies) into structured data with page citations; the engine does all math.
 - New engine tools, each deterministic, versioned and tested:
@@ -70,8 +71,8 @@ Goal: paying Pro users and real cost per audit measured.
 
 ## Phase 3: Businesses through agencies
 Goal: agencies renewing and clients finishing audits faster.
-- Audit Ready (from $49): business account, guided intake reusing the chat flows, checklist tracking with uploads, flags with dollar impact (subs without COIs, overtime, officer exclusion vs the policy), packaged indexed file with a cover summary.
-- Partner accounts: agency dashboard for many client audits, co-branding, client invites, client-pays option, partner seats from $49.
+- Audit Ready (in PennyPro and PennyMax): business account, guided intake reusing the chat flows, checklist tracking with uploads, flags with dollar impact (subs without COIs, overtime, officer exclusion vs the policy), packaged indexed file with a cover summary.
+- Partner accounts: agency dashboard for many client audits, co-branding, client invites, client-pays option; agencies use PennyPro or PennyMax with added seats, white-label and API are Enterprise.
 - Statement Insurance is the pilot partner. ST360 already stores WC class codes and officer elections per client, so build "Send to Penny" from ST360 via a partner API key. Then roll out to NIIA agencies.
 - Audit Review (paid): flat fee first. DECISION: legal review of consultant licensing and success fees before launch.
 

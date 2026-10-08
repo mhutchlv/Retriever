@@ -8,7 +8,7 @@ import { asObject, optEnum, optString, reqString } from "../engine/validate.ts";
 // these are contact details people chose to give, stored under their consent.
 
 export const ROLES = ["business", "auditor", "agency_or_partner", "insurer", "other"] as const;
-export const INTERESTS = ["free_account", "pro", "max", "team", "audit_ready", "audit_review", "partner", "insurer_demo", "other"] as const;
+export const INTERESTS = ["free_account", "pro", "max", "team", "enterprise", "audit_ready", "audit_review", "partner", "insurer_demo", "other"] as const;
 
 export interface Lead {
   leadId: string;

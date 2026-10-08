@@ -10,11 +10,11 @@ This document is the design target for Phases 2 to 4 in `docs/BUILD-PLAN.md`. Th
 
 | Role | Plan | What they come to do |
 | --- | --- | --- |
-| Premium auditor (staff or contract) | Pro, Max, carrier seat | Work an assigned list of audits from records request to final report; check and correct Penny's first pass; produce the worksheet and report the carrier needs. |
-| Team admin | Team (3 to 25 seats; the bridge to enterprise) | Seats, pooled audit allowance, shared templates, assigning cases across the team. Not the enterprise director console. |
+| Premium auditor (staff or contract) | PennyPro, PennyMax, carrier seat | Work an assigned list of audits from records request to final report; check and correct Penny's first pass; produce the worksheet and report the carrier needs. |
+| Team admin | PennyPro or PennyMax with added seats (the bridge to Enterprise) | Seats, pooled usage allowance, shared templates, assigning cases across the team. Not the enterprise director console. |
 | Audit director / audit manager | Carrier enterprise (Director dashboard) | See every audit and dispute across the team, assign work, review and approve, watch aging, quality and the share cleared without changes. |
-| Insurance agency / bookkeeper | Partner seat | Prepare many clients for their audits, track each client's status, review final bills, start a dispute for a client. |
-| Small business owner | Audit Ready, Audit Review | Get ready for one audit, upload records, understand the final bill line by line, accept it or dispute specific lines. |
+| Insurance agency / bookkeeper | PennyPro or PennyMax with seats | Prepare many clients for their audits, track each client's status, review final bills, start a dispute for a client. |
+| Small business owner | Free account, PennyPro (Audit Ready, Audit Review) | Get ready for one audit, upload records, understand the final bill line by line, accept it or dispute specific lines. |
 
 A person can hold more than one role (an agency that is also a business owner, a director who also audits). The role is chosen per workspace, not per login.
 
@@ -143,8 +143,9 @@ Penny is three things in one panel: the audit assistant, the operator of the wor
 
 ## Plan fences in the workspace
 
-- Pro and Max: one person, individual license; case workspace, email intake, custom output formats, audit tracking.
-- Team: shared workspace, pooled audits, admin controls; no director console.
+- PennyPro ($199/month) and PennyMax ($399/month): one person per license; case workspace, email intake, custom output formats, audit tracking. Max has a much larger monthly usage allowance.
+- Additional seats: a PennyPro or PennyMax user adds teammates; shared workspace, pooled usage allowance, admin controls; no director console.
+- Free account: the free tools saved to an account.
 - Enterprise only: director console, company system integrations, the carrier's own learning model, SSO, audit-trail export, carrier-wide licensing, the insured dispute portal.
 - Carrier controls: a carrier can allow or block its contract auditors from using Pro with that carrier's audits.
 - Partner referral: when a partner's client is audited by a Propono carrier, the workspace offers the carrier-side path.
