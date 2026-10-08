@@ -437,6 +437,11 @@
     consent.appendChild(box);
     consent.appendChild(document.createTextNode(" It's OK for the Propono team to contact me about Penny."));
     form.appendChild(consent);
+    var legal = el("span", "small");
+    var pp = el("a", "", "privacy policy"); pp.href = "privacy.html"; pp.target = "_blank"; pp.rel = "noopener";
+    var tt = el("a", "", "terms"); tt.href = "terms.html"; tt.target = "_blank"; tt.rel = "noopener";
+    legal.append("See our ", pp, " and ", tt, ".");
+    form.appendChild(legal);
     var err = el("span", "small signup-error");
     var submit = el("button", "btn", "Sign me up");
     submit.type = "submit";
@@ -677,4 +682,6 @@
   sendBtn.onclick = function () { handle(input.value); };
   input.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); handle(input.value); } });
   reset();
+  // index.html#talk opens the contact form (linked from the privacy and terms pages).
+  if (location.hash === "#talk") setTimeout(function () { showSignup("other"); }, 800);
 })();

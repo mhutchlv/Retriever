@@ -55,6 +55,8 @@ const PAGES = [
   { file: "insurers.html", title: "For insurers" },
   { file: "security.html", title: "Data security" },
   { file: "research.html", title: "Research" },
+  { file: "privacy.html", title: "Privacy policy" },
+  { file: "terms.html", title: "Terms of use" },
 ];
 
 /** Visible text of an HTML page: scripts, styles, svg and tags removed, whitespace collapsed. */

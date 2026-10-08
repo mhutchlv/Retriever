@@ -113,7 +113,7 @@ export function salesIntent(lower: string): SalesReply | null {
   if (/secur|soc ?2|privacy|private|encrypt|confidential|safe|my data|store (my|the) data|keep (my|what)/.test(lower)) {
     return {
       reply:
-        "Penny runs on Propono's SOC 2 Type II certified platform. Data is encrypted in transit and at rest, and each insurer's data is walled off. The free tools don't keep what you type: Penny stores only a fingerprint of each result, and you can save a receipt to verify it later. The full details are on the Data security page (security.html), and the SOC 2 report is available under NDA through the team.",
+        "Penny runs on Propono's SOC 2 Type II certified platform. Data is encrypted in transit and at rest, and each insurer's data is walled off. The free tools don't keep what you type: Penny stores only a fingerprint of each result, and you can save a receipt to verify it later. The full details are on the Data security page (security.html), what this preview collects is in the privacy policy (privacy.html), and the SOC 2 report is available under NDA through the team.",
       suggestions: ["Request the SOC 2 report", "Try a free tool"],
     };
   }
