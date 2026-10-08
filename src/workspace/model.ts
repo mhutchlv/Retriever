@@ -125,6 +125,8 @@ export interface Case {
   dueDate: string;
   auditType: "Field" | "Remote" | "Mail";
   contact: string;
+  /** Description of operations for the audit report: what the business does, where and how. */
+  operations: string;
   /** Rates per $100 of payroll, from the policy's declarations. */
   rates: Record<string, { rate: string; title: string }>;
   experienceMod: string;

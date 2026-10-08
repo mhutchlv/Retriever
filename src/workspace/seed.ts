@@ -49,6 +49,8 @@ export function sampleCases(username: string): SeedCase[] {
         dueDate: "2026-10-30",
         auditType: "Field",
         contact: "Ray Duarte, managing member",
+        operations:
+          "Landscape installation and maintenance for homes and small commercial properties in the Las Vegas valley: mowing, trimming, planting, irrigation installation and repair, and seasonal cleanup. Crews of two to four work from three company trucks. Paver and wall work and tree trimming are subcontracted; employees don't work in trees. One employee visits client sites to measure and quote jobs. Office staff handle scheduling, billing and bookkeeping from a leased office in Henderson.",
         rates: {
           "0042": { rate: "6.21", title: "Landscape gardening & drivers" },
           "8742": { rate: "0.48", title: "Salespersons or collectors, outside" },
@@ -150,6 +152,7 @@ export function sampleCases(username: string): SeedCase[] {
         dueDate: "2026-11-14",
         auditType: "Remote",
         contact: "Dana Kessler, office manager",
+        operations: "",
         rates: {
           "5551": { rate: "9.85", title: "Roofing: all kinds & drivers" },
           "8810": { rate: "0.18", title: "Clerical office employees NOC" },
@@ -189,6 +192,8 @@ export function sampleCases(username: string): SeedCase[] {
         dueDate: "2026-10-20",
         auditType: "Remote",
         contact: "Luz Herrera, owner",
+        operations:
+          "Commercial janitorial service for office buildings and medical offices in Reno and Sparks, done at night by crews of two or three: trash removal, vacuuming, restroom cleaning and floor care. No window washing above ground level. A supervisor rotates between sites; one scheduler works in the office.",
         rates: {
           "9014": { rate: "3.94", title: "Janitorial services by contractors & drivers" },
           "8810": { rate: "0.22", title: "Clerical office employees NOC" },
@@ -236,6 +241,8 @@ export function sampleCases(username: string): SeedCase[] {
         dueDate: "2026-10-24",
         auditType: "Field",
         contact: "Owen Pike, controller",
+        operations:
+          "Electrical contractor wiring new construction and tenant improvements in commercial buildings in Las Vegas. No work on buildings over three stories and no utility line work. Office staff handle estimating, billing and payroll.",
         rates: {
           "5190": { rate: "4.37", title: "Electrical wiring within buildings & drivers" },
           "8810": { rate: "0.22", title: "Clerical office employees NOC" },

@@ -26,6 +26,7 @@ What you do:
 - Explain figures using the engine results in the case data (counted payroll, premium steps, officer limits, caps). Every dollar figure you state must appear in the case data or a tool result in this conversation. Never do arithmetic yourself; to see the effect of a change, propose it and read the premium effect from the result.
 - Propose changes with propose_change. Changes are applied only when the person clicks Apply on the card you create, so say "I've put the change below for you to apply", never that you made it. Give a short, specific reason in each proposal (the person can edit nothing on the card, so get it right). For several rows, make one proposal per row in the same turn.
 - Be the user manual for the workspace (see Help below) and answer general premium audit questions briefly. Rules vary by state and bureau; say so when it matters. Never quote NCCI manual text.
+- The audit report needs a description of operations (what the business does, where, how, with what crews and equipment, and what it subcontracts). When asked to write or improve one, draft it from the case documents, lines, officers and subs, in plain factual sentences under about 120 words, and propose it with set_operations. Never invent facts the case data doesn't support; leave them out and say what to confirm with the insured. The case can't move to Draft ready or later without one.
 - Status changes that leave the workspace (Submitted to carrier, Final) still go through a card; remind the person they're confirming it.
 
 Limits:
@@ -35,6 +36,7 @@ Limits:
 
 Help (how the workspace works):
 - Left rail: your queue (due this week, in review, waiting on insured, open flags) and the case list.
+- Overview starts with the description of operations, which the audit report requires; Edit to write it, or ask Penny to draft one.
 - Center: the case header with the status stepper and Next step button, the summary strip (estimated audit premium, deposit, difference, flags, findings), and tabs: Overview (payroll by class, premium steps, receipts), Worksheet (every payroll line with source, edit, keep-as-is for flags, bulk move to class), Officers & subs (include or exclude officers, treat subs as insured or uninsured), Documents (sample records and what cites them; uploads are off in the preview), Findings (accept, reject, reopen), Timeline (every change with who, when, before and after, reason and premium effect; undo; notes; the hash chain check), Reports (printable audit report, worksheet CSV for Excel).
 - Every change needs a reason when it moves money, is recorded on the timeline, and can be undone with a new event. Nothing is deleted.
 - Receipts: each total comes from an engine run with a fingerprint and rule versions, so it can be reproduced.
@@ -52,7 +54,7 @@ const PROPOSE_TOOL: Anthropic.Beta.BetaTool = {
         description:
           `One workspace action. type is one of ${ACTION_TYPES.join(", ")}. Fields: set_status {status (one of: ${AUDIT_STATUSES.join(", ")}), reason?}; ` +
           "update_line {lineId, classCode?, payroll?, overtimePremium?, overtimeExcluded?, reason}; set_officer {officerId, status? included|excluded, classCode?, reason}; " +
-          "set_sub {subId, treatment? insured|uninsured, classCode?, reason}; set_finding {findingId, status open|accepted|rejected, reason?}; clear_flag {lineId, reason}; add_note {text}; undo {seq}. " +
+          "set_sub {subId, treatment? insured|uninsured, classCode?, reason}; set_finding {findingId, status open|accepted|rejected, reason?}; clear_flag {lineId, reason}; add_note {text}; set_operations {text, reason?} (the description of operations); undo {seq}. " +
           "Dollar amounts are plain decimals like \"52000.00\".",
         properties: { type: { type: "string", enum: [...ACTION_TYPES] } },
         required: ["type"],
@@ -83,6 +85,7 @@ function caseContext(c: Case, tenant: string): string {
       dueDate: c.dueDate,
       auditType: c.auditType,
       contact: c.contact,
+      descriptionOfOperations: c.operations || "(not written yet)",
       rates: c.rates,
       experienceMod: c.experienceMod,
       depositPremium: c.depositPremium,

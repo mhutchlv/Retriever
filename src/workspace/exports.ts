@@ -13,6 +13,7 @@ const row = (cells: string[]) => cells.map(csvCell).join(",");
 export function worksheetCsv(c: Case, t: CaseTotals): string {
   const out: string[] = [];
   out.push(row([`${c.insured} (SAMPLE)`, `Policy ${c.policyNumber}`, `${c.policyEffectiveDate} to ${c.policyExpirationDate}`, c.state]));
+  out.push(row(["Description of operations", c.operations ?? ""]));
   out.push("");
   out.push(row(["Type", "Name", "Title or work", "Class", "Gross pay", "Overtime premium", "Overtime left out", "Counted", "Capped", "Source", "Set by", "Open flag"]));
   for (const l of c.lines) {
@@ -69,6 +70,7 @@ h1{font-size:24px;margin:0 0 4px}h2{font-size:17px;margin:28px 0 8px;border-bott
 table{width:100%;border-collapse:collapse;margin:6px 0}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid #E3E0DA;vertical-align:top}
 th{font-size:12px;color:#5B5F66}td.n{text-align:right;font-family:'IBM Plex Mono',monospace;white-space:nowrap}
 .meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:4px 16px;color:#3E434A}
+.ops{white-space:pre-line;margin:0}.missing{background:#FBEAE6;color:#7A2410;padding:8px 12px;border-radius:8px;margin:0}
 .total td{font-weight:700;border-top:2px solid #15191F}.small{font-size:12px;color:#5B5F66}code{font-size:11px}
 @media print{.sample{border:1px solid #7E3415}body{margin:0}}
 </style></head><body>
@@ -80,6 +82,8 @@ th{font-size:12px;color:#5B5F66}td.n{text-align:right;font-family:'IBM Plex Mono
 <div><b>Period:</b> ${esc(c.policyEffectiveDate)} to ${esc(c.policyExpirationDate)}</div><div><b>Audit type:</b> ${esc(c.auditType)}</div>
 <div><b>Status:</b> ${esc(c.status)}</div><div><b>Auditor:</b> ${esc(c.assignee)}</div>
 </div>
+<h2>Description of operations</h2>
+${c.operations?.trim() ? `<p class="ops">${esc(c.operations)}</p>` : `<p class="missing">Not written yet. The report isn't complete without a description of operations.</p>`}
 <h2>Payroll by class</h2>
 <table><thead><tr><th>Class</th><th>Title</th><th>Employees</th><th>Officers</th><th>Uninsured subs</th><th>Total</th><th>Rate</th><th>Premium</th></tr></thead><tbody>
 ${t.byClass

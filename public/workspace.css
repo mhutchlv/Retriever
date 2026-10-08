@@ -168,3 +168,10 @@ table.ws .btn.sm,table.ws .iconbtn{white-space:nowrap}
   .chead h1{font-size:24px}
 }
 .loginpage{flex-direction:column;gap:12px}.loginpage footer{background:none;color:var(--muted);font-size:13px}.loginpage footer nav{display:flex;gap:16px;justify-content:center}.loginpage footer a{color:var(--muted)}
+/* description of operations */
+.ops{background:#fff;border:1px solid var(--line);border-radius:var(--r-s);padding:14px 16px;margin-bottom:16px;display:flex;flex-direction:column;gap:10px}
+.opshead{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+.opshead h3{margin:0}
+.opsbtns{display:flex;flex-wrap:wrap;gap:8px}
+.opstext{margin:0;white-space:pre-line;color:var(--body)}
+.ops textarea{width:100%;border:1px solid #CFCAC1;border-radius:var(--r-s);padding:10px 12px;font:inherit;font-size:14px;line-height:1.5;color:var(--ink);background:#fff}

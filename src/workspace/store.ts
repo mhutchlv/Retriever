@@ -19,9 +19,13 @@ export type Action =
   | { type: "set_finding"; findingId: string; status: "open" | "accepted" | "rejected"; reason?: string }
   | { type: "clear_flag"; lineId: string; reason: string }
   | { type: "add_note"; text: string }
+  | { type: "set_operations"; text: string; reason?: string }
   | { type: "undo"; seq: number };
 
-export const ACTION_TYPES = ["set_status", "update_line", "set_officer", "set_sub", "set_finding", "clear_flag", "add_note", "undo"] as const;
+export const ACTION_TYPES = ["set_status", "update_line", "set_officer", "set_sub", "set_finding", "clear_flag", "add_note", "set_operations", "undo"] as const;
+
+/** Statuses that produce or rely on the audit report, which needs a description of operations. */
+const REPORT_STATUSES: readonly AuditStatus[] = ["Draft ready", "Director review", "Submitted to carrier", "Final"];
 
 export interface ChangeCard {
   action: Action;
@@ -89,6 +93,10 @@ export function parseAction(raw: unknown): Action {
       return { type, lineId: reqString(o.lineId, "lineId", 20), reason: reason(o.reason, true)! };
     case "add_note":
       return { type, text: reqString(o.text, "text", 2000) };
+    case "set_operations": {
+      const r = reason(o.reason, false);
+      return { type, text: reqString(o.text, "text", 4000), ...(r ? { reason: r } : {}) };
+    }
     case "undo": {
       const seq = o.seq;
       if (typeof seq !== "number" || !Number.isInteger(seq) || seq < 1) throw new InputError("seq", "must be a timeline event number");
@@ -120,6 +128,9 @@ function setFields(target: object, after: Record<string, unknown>) {
 function mutate(c: Case, action: Action, actor: string): Mutation {
   switch (action.type) {
     case "set_status": {
+      if (REPORT_STATUSES.includes(action.status) && !c.operations?.trim()) {
+        throw new InputError("status", "write the description of operations first; the audit report needs it");
+      }
       const before = { status: c.status };
       c.status = action.status;
       return { summary: `Status set to ${action.status}`, target: "status", before, after: { status: c.status }, ...(action.reason ? { reason: action.reason } : {}), movesMoney: false };
@@ -178,6 +189,11 @@ function mutate(c: Case, action: Action, actor: string): Mutation {
       delete l.flag;
       return { summary: `Flag cleared on ${l.payee}, kept as is`, target: `line:${l.id}`, before, after: { flag: undefined }, reason: action.reason, movesMoney: false };
     }
+    case "set_operations": {
+      const before = { operations: c.operations ?? "" };
+      c.operations = action.text;
+      return { summary: before.operations ? "Description of operations updated" : "Description of operations written", target: "operations", before, after: { operations: c.operations }, ...(action.reason ? { reason: action.reason } : {}), movesMoney: false };
+    }
     case "add_note":
       c.notes.push({ at: new Date().toISOString(), author: actor, text: action.text });
       return { summary: `Note added: ${action.text.slice(0, 120)}`, movesMoney: false };
@@ -195,7 +211,7 @@ function mutate(c: Case, action: Action, actor: string): Mutation {
 }
 
 function entityFor(c: Case, target: string): object {
-  if (target === "status") return c;
+  if (target === "status" || target === "operations") return c;
   const [kind, id = ""] = target.split(":");
   if (kind === "line") return find(c.lines, id, "line");
   if (kind === "officer") return find(c.officers, id, "officer");
@@ -242,6 +258,11 @@ export class WorkspaceStore {
     if (file && existsSync(file)) {
       try {
         Object.assign(this.data, (JSON.parse(readFileSync(file, "utf8")) as { workspaces: Record<string, Case[]> }).workspaces);
+        // Cases saved before the description of operations existed get the sample text.
+        for (const [user, list] of Object.entries(this.data)) {
+          const seeds = sampleCases(user);
+          for (const c of list) c.operations ??= seeds.find((s) => s.data.id === c.id)?.data.operations ?? "";
+        }
       } catch (err) {
         console.error("workspace file unreadable; starting fresh", err);
       }

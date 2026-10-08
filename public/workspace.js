@@ -188,8 +188,22 @@
     }).join("") + "</tr></thead><tbody>" + (rows.join("") || '<tr><td colspan="' + head.length + '" class="muted">Nothing here yet.</td></tr>') + "</tbody></table></div>";
   }
 
+  function opsBlock() {
+    var c = C(), text = (c.operations || "").trim();
+    var out = '<section class="ops" aria-labelledby="ops-h"><div class="opshead"><h3 id="ops-h">Description of operations</h3>';
+    if (S.editOps) {
+      return out + "</div>" +
+        '<label class="sr" for="ops-in">Description of operations</label><textarea id="ops-in" rows="6" maxlength="4000">' + esc(c.operations || "") + "</textarea>" +
+        '<div class="opsbtns"><button class="btn sm" type="button" data-act="saveops">Save</button><button class="btn ghost sm" type="button" data-act="cancelops">Cancel</button></div></section>';
+    }
+    out += '<span class="opsbtns"><button class="btn ghost sm" type="button" data-act="editops">' + (text ? "Edit" : "Write it") + '</button><button class="btn ghost sm" type="button" data-act="draftops">Ask Penny to draft</button></span></div>';
+    out += text ? '<p class="opstext">' + esc(c.operations) + "</p>"
+      : '<div class="callout bad" role="note">Not written yet. The audit report needs a description of operations before the case can move to Draft ready.</div>';
+    return out + "</section>";
+  }
+
   function tabOverview() {
-    var t = T(), est = t.estimate || {}, out = "";
+    var t = T(), est = t.estimate || {}, out = opsBlock();
     var warns = [];
     (t.problems || []).forEach(function (p) { warns.push(["bad", p]); });
     (est.warnings || []).forEach(function (p) { warns.push(["warn", p]); });
@@ -371,7 +385,7 @@
   }
 
   function loadCase(id) {
-    S.caseId = id; S.sel = {}; S.editLine = null; S.data = null;
+    S.caseId = id; S.sel = {}; S.editLine = null; S.editOps = false; S.data = null;
     center.innerHTML = '<p class="muted pad">Loading…</p>';
     renderRail(); renderChat(); location.hash = "case=" + encodeURIComponent(id);
     return api("/api/workspace/cases/" + encodeURIComponent(id)).then(function (res) {
@@ -415,6 +429,17 @@
       var s = $("st-sel").value, r = $("st-reason").value.trim(), a = { type: "set_status", status: s };
       if (r) a.reason = r;
       act(a);
+    },
+    editops: function () { S.editOps = true; renderCenter(true); var i = $("ops-in"); if (i) i.focus(); },
+    cancelops: function () { S.editOps = false; renderCenter(true); },
+    saveops: function () {
+      var v = $("ops-in").value.trim();
+      if (!v) { toast("Write the description first.", true); return; }
+      act({ type: "set_operations", text: v }).then(function (r) { if (r) { S.editOps = false; renderCenter(true); } });
+    },
+    draftops: function () {
+      $("penny").classList.add("open");
+      sendChat("Draft the description of operations for this case's audit report from the case records.");
     },
     editline: function (b, id) { S.editLine = S.editLine === id ? null : id; renderCenter(true); },
     cancelline: function () { S.editLine = null; renderCenter(true); },

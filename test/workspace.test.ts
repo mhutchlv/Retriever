@@ -5,7 +5,7 @@ import { Auth, hashPassword, verifyPassword, accountsFromEnv } from "../src/auth
 import { MemoryLeadSink } from "../src/leads/store.ts";
 import { MemoryRunLog } from "../src/runlog/store.ts";
 import { createApp } from "../src/server/app.ts";
-import { worksheetCsv } from "../src/workspace/exports.ts";
+import { reportHtml, worksheetCsv } from "../src/workspace/exports.ts";
 import { computeCase } from "../src/workspace/model.ts";
 import { verifyTimeline, WorkspaceStore } from "../src/workspace/store.ts";
 
@@ -167,5 +167,24 @@ describe("workspace http", () => {
   it("signs out", async () => {
     await post("/api/auth/logout", {});
     assert.equal((await fetch(base + "/api/workspace/cases", { headers: { Cookie: cookie } })).status, 401);
+  });
+});
+
+describe("description of operations", () => {
+  it("is required before Draft ready, recorded and undoable", () => {
+    const store = new WorkspaceStore();
+    assert.throws(() => store.apply("tester", "SRR-2026", { type: "set_status", status: "Draft ready" }, "T", "workspace"), /description of operations/);
+    const e = store.apply("tester", "SRR-2026", { type: "set_operations", text: "Residential and commercial roofing." }, "T", "workspace");
+    assert.deepEqual(e.before, { operations: "" });
+    store.apply("tester", "SRR-2026", { type: "set_status", status: "Draft ready" }, "T", "workspace");
+    assert.equal(store.get("tester", "SRR-2026")!.status, "Draft ready");
+  });
+
+  it("appears in the report, or the report says it's missing", () => {
+    const store = new WorkspaceStore();
+    const done = store.get("tester", "DRL-2026")!;
+    assert.match(reportHtml(done, computeCase(done, "ws:tester"), [], { ok: true, events: 1 }), /Landscape installation and maintenance/);
+    const missing = store.get("tester", "SRR-2026")!;
+    assert.match(reportHtml(missing, computeCase(missing, "ws:tester"), [], { ok: true, events: 1 }), /Not written yet/);
   });
 });
