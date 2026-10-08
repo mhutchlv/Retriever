@@ -4,8 +4,8 @@ import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 const dir = fileURLToPath(new URL("../public/", import.meta.url));
-// workspace.html and insured.html are signed-in app shells; they link the policies in the page itself.
-const pages = readdirSync(dir).filter((f) => f.endsWith(".html") && f !== "workspace.html" && f !== "insured.html");
+// Signed-in app shells (workspace, insured, director) link the policies in the page itself.
+const pages = readdirSync(dir).filter((f) => f.endsWith(".html") && !["workspace.html", "insured.html", "director.html"].includes(f));
 
 test("every page links the privacy policy and terms in its footer", () => {
   for (const page of pages) {

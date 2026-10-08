@@ -285,3 +285,75 @@ describe("insured portal", () => {
     assert.equal((await post("/api/insured/upload", { item: "nope", files: [{ name: "x.pdf", size: 1, type: "" }] })).status, 400);
   });
 });
+
+describe("new cases, insured view and director board", () => {
+  const store = new WorkspaceStore();
+  const app = createApp({ runLog: new MemoryRunLog(), leads: new MemoryLeadSink(), useModel: false, auth: new Auth(accounts), workspace: store });
+  let base = "";
+  let cookie = "";
+  before(async () => {
+    await new Promise<void>((r) => app.listen(0, "127.0.0.1", r));
+    base = `http://127.0.0.1:${(app.address() as AddressInfo).port}`;
+    const res = await fetch(base + "/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: "tester", password: PASSWORD }) });
+    cookie = res.headers.get("set-cookie")!.split(";")[0]!;
+  });
+  after(() => new Promise<void>((r) => app.close(() => r())));
+  const post = (path: string, body: unknown) =>
+    fetch(base + path, { method: "POST", headers: { "Content-Type": "application/json", Cookie: cookie }, body: JSON.stringify(body) });
+  const get = (path: string) => fetch(base + path, { headers: { Cookie: cookie } });
+
+  const newCase = {
+    insured: "Juniper Tile & Stone LLC",
+    entityType: "llc",
+    state: "nv",
+    contactName: "Alex Moreno",
+    contactEmail: "alex@example.com",
+    contactPhone: "(702) 555-0100",
+    policyNumber: "SMP-WC-2000001",
+    carrier: "Sample Mutual Insurance Co.",
+    policyEffectiveDate: "2025-11-01",
+    policyExpirationDate: "2026-11-01",
+    auditType: "Remote",
+    dueDate: "2026-12-15",
+    classes: [{ code: "5348", rate: "6.12", title: "Tile work" }],
+    files: [{ name: "Policy declarations.pdf", size: 80000, type: "application/pdf" }],
+  };
+
+  it("opens a new case with contact details and documents recorded by name", async () => {
+    const res = await post("/api/workspace/cases", newCase);
+    assert.equal(res.status, 200);
+    const { id } = await res.json();
+    assert.equal(id, "JTS-2025");
+    const view = await (await get(`/api/workspace/cases/${id}`)).json();
+    assert.equal(view.case.contactEmail, "alex@example.com");
+    assert.equal(view.case.state, "NV");
+    assert.equal(view.case.documents[0].name, "Policy declarations.pdf");
+    assert.equal(view.case.timeline[0].action, "created");
+    assert.equal(view.timelineCheck.ok, true);
+  });
+
+  it("validates the new case", async () => {
+    assert.equal((await post("/api/workspace/cases", { ...newCase, policyExpirationDate: "2025-01-01" })).status, 400);
+    assert.equal((await post("/api/workspace/cases", { ...newCase, contactEmail: "nope" })).status, 400);
+  });
+
+  it("lets the auditor open the insured's view of their own case only", async () => {
+    const v = await (await get("/api/insured/case?case=JTS-2025")).json();
+    assert.equal(v.business.name, "Juniper Tile & Stone LLC");
+    assert.equal(v.previewFor.caseId, "JTS-2025");
+    assert.equal((await get("/api/insured/case")).status, 403);
+    assert.equal((await get("/api/insured/case?case=NOPE")).status, 403);
+    const up = await post("/api/insured/upload?case=JTS-2025", { item: "form-941", files: [{ name: "941.pdf", size: 10, type: "" }] });
+    assert.equal(up.status, 200);
+    const c = store.get("tester", "JTS-2025")!;
+    assert.match(c.timeline.at(-1)!.actor, /insured view/);
+  });
+
+  it("builds the director board from live cases and the sample team", async () => {
+    const b = await (await get("/api/director/board")).json();
+    assert.ok(b.cases.some((r: { id: string; live: boolean }) => r.id === "DRL-2026" && r.live));
+    assert.ok(b.cases.some((r: { live: boolean }) => !r.live));
+    assert.ok(b.byAuditor.length >= 3);
+    assert.ok(b.reviewQueue.every((r: { status: string }) => r.status === "Draft ready" || r.status === "Director review"));
+  });
+});

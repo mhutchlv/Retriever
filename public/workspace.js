@@ -174,7 +174,7 @@
       '<div class="facts2">' +
       f("Policy", c.policyNumber) + f("Carrier", c.carrier) + f("State", c.state) +
       f("Period", fmtDate(c.policyEffectiveDate) + " to " + fmtDate(c.policyExpirationDate)) +
-      f("Audit type", c.auditType) + f("Contact", c.contact && typeof c.contact === "object" ? kv(c.contact) : c.contact) +
+      f("Audit type", c.auditType) + f("Contact", [c.contact, c.contactEmail, c.contactPhone].filter(Boolean).join(" · ")) +
       f("Assignee", c.assignee) + f("Due", fmtDate(c.dueDate)) + "</div>" +
       stepper + "</section>";
 
@@ -528,6 +528,7 @@
 
   function loadCase(id) {
     markOpened(id);
+    document.dispatchEvent(new CustomEvent("penny:case", { detail: id }));
     S.caseId = id; S.sel = {}; S.editLine = null; S.editOps = false; S.open = {}; S.data = null;
     center.innerHTML = '<p class="muted pad">Loading…</p>';
     renderRail(); renderChat(); location.hash = "case=" + encodeURIComponent(id);
@@ -652,6 +653,94 @@
       act({ type: "undo", seq: cd.seq }).then(function (r) { if (r) cardSet(m, ci, { state: "undone" }); });
     }
   };
+
+  /* ---------- new case ---------- */
+  function fileSize(n) { return n >= 1048576 ? (n / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(n / 1024)) + " KB"; }
+
+  function openNewCase() {
+    var picked = [];
+    var today = new Date(), iso = function (d) { return d.toISOString().slice(0, 10); };
+    var due = new Date(today.getTime() + 30 * 86400000);
+    var box = document.createElement("div");
+    box.className = "modal";
+    box.setAttribute("role", "dialog");
+    box.setAttribute("aria-modal", "true");
+    box.setAttribute("aria-labelledby", "nc-h");
+    box.innerHTML = '<form class="modalcard" id="ncform" novalidate><h3 id="nc-h">New case</h3>' +
+      '<p class="small muted">Preview: use sample information only. Files stay on your computer; only their names and sizes are recorded.</p>' +
+      '<div class="ncgrid">' +
+      '<fieldset><legend>Insured</legend>' +
+      '<label class="full">Business name<input name="insured" required maxlength="120" autocomplete="off"></label>' +
+      '<label>Entity type<select name="entityType"><option value="corporation">Corporation</option><option value="llc">LLC</option><option value="partnership">Partnership</option><option value="sole_proprietor">Sole proprietor</option></select></label>' +
+      '<label>State<input name="state" required maxlength="2" placeholder="NV" autocomplete="off"></label>' +
+      '<label>Contact name<input name="contactName" required maxlength="80" autocomplete="off"></label>' +
+      '<label>Contact email<input name="contactEmail" type="email" maxlength="120" autocomplete="off"></label>' +
+      '<label>Contact phone<input name="contactPhone" type="tel" maxlength="30" autocomplete="off"></label></fieldset>' +
+      '<fieldset><legend>Policy</legend>' +
+      '<label>Policy number<input name="policyNumber" required maxlength="40" autocomplete="off"></label>' +
+      '<label>Carrier<input name="carrier" required maxlength="120" value="Sample Mutual Insurance Co."></label>' +
+      '<label>Effective date<input name="policyEffectiveDate" type="date" required></label>' +
+      '<label>Expiration date<input name="policyExpirationDate" type="date" required></label>' +
+      '<label>Audit type<select name="auditType"><option>Remote</option><option>Field</option><option>Mail</option></select></label>' +
+      '<label>Audit due<input name="dueDate" type="date" required value="' + iso(due) + '"></label>' +
+      '<label class="full">Class codes and rates from the declarations, one per line<textarea name="classes" rows="3" placeholder="5551 9.85 Roofing&#10;8810 0.18 Clerical"></textarea></label></fieldset>' +
+      '<fieldset><legend>Documents</legend>' +
+      '<div class="ncfiles full" id="ncdrop">Drop files here or <button type="button" class="linkbtn" id="ncpick">choose files</button><input type="file" id="ncfile" multiple hidden><ul id="nclist"></ul></div></fieldset>' +
+      '</div><p class="err" id="ncerr" role="alert"></p>' +
+      '<div class="modalbtns"><button class="btn sm" type="submit">Create case</button><button class="iconbtn" type="button" id="nccancel">Cancel</button></div></form>';
+    document.body.appendChild(box);
+    var form = box.querySelector("#ncform"), err = box.querySelector("#ncerr");
+    var close = function () { if (box.parentNode) box.parentNode.removeChild(box); $("newcase").focus(); };
+    var addFiles = function (list) {
+      Array.prototype.forEach.call(list, function (f) {
+        if (f.size > 50 * 1048576) { toast(f.name + " is over 50 MB.", true); return; }
+        if (picked.length < 20) picked.push({ name: f.name.slice(0, 150), size: f.size, type: f.type || "" });
+      });
+      box.querySelector("#nclist").innerHTML = picked.map(function (f, i) {
+        return "<li>" + esc(f.name) + ' <span class="muted">' + esc(fileSize(f.size)) + '</span> <button type="button" class="linkbtn" data-rm="' + i + '">Remove</button></li>';
+      }).join("");
+    };
+    var drop = box.querySelector("#ncdrop");
+    box.querySelector("#ncpick").addEventListener("click", function () { box.querySelector("#ncfile").click(); });
+    box.querySelector("#ncfile").addEventListener("change", function (e) { addFiles(e.target.files); e.target.value = ""; });
+    drop.addEventListener("dragover", function (e) { e.preventDefault(); drop.classList.add("over"); });
+    drop.addEventListener("dragleave", function () { drop.classList.remove("over"); });
+    drop.addEventListener("drop", function (e) { e.preventDefault(); drop.classList.remove("over"); addFiles(e.dataTransfer.files); });
+    box.querySelector("#nclist").addEventListener("click", function (e) {
+      var b = e.target.closest("[data-rm]");
+      if (b) { picked.splice(Number(b.getAttribute("data-rm")), 1); addFiles([]); }
+    });
+    box.querySelector("#nccancel").addEventListener("click", close);
+    box.addEventListener("keydown", function (e) { if (e.key === "Escape") close(); });
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var v = function (n) { return (form.elements[n].value || "").trim(); };
+      var classes = [], bad = null;
+      v("classes").split(/\n+/).forEach(function (ln) {
+        ln = ln.trim(); if (!ln) return;
+        var m = /^(\d{3,4})\s+([\d.]+)\s*(.*)$/.exec(ln);
+        if (!m) { bad = ln; return; }
+        classes.push({ code: m[1], rate: m[2], title: m[3] || undefined });
+      });
+      if (bad) { err.textContent = 'Couldn\'t read "' + bad + '". Use: class code, rate, then a short title.'; return; }
+      var body = {
+        insured: v("insured"), entityType: v("entityType"), state: v("state").toUpperCase(), contactName: v("contactName"),
+        contactEmail: v("contactEmail") || undefined, contactPhone: v("contactPhone") || undefined,
+        policyNumber: v("policyNumber"), carrier: v("carrier"), policyEffectiveDate: v("policyEffectiveDate"),
+        policyExpirationDate: v("policyExpirationDate"), auditType: v("auditType"), dueDate: v("dueDate"), classes: classes, files: picked
+      };
+      err.textContent = "";
+      api("/api/workspace/cases", { body: body }).then(function (r) {
+        close();
+        S.cases = r.cases || S.cases;
+        renderRail();
+        toast("Case opened for " + body.insured + ".");
+        loadCase(r.id);
+      }).catch(function (x) { err.textContent = x.message; });
+    });
+    form.elements.insured.focus();
+  }
+  $("newcase").addEventListener("click", openNewCase);
 
   /* ---------- Penny chat ---------- */
   var PROMPTS = ["Why is Tom Becker flagged?", "What's left before Draft ready?", "Move Tom Becker to 8742", "Explain the premium"];

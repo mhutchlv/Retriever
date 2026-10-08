@@ -172,6 +172,8 @@ export interface Case {
   dueDate: string;
   auditType: "Field" | "Remote" | "Mail";
   contact: string;
+  contactEmail?: string;
+  contactPhone?: string;
   /** Description of operations for the audit report: what the business does, where and how. */
   operations: string;
   /** Rates per $100 of payroll, from the policy's declarations. */
@@ -289,7 +291,8 @@ export function computeCase(c: Case, tenant: string): CaseTotals {
         }),
         experienceMod: c.experienceMod,
         expenseConstant: c.expenseConstant,
-        depositPremium: c.depositPremium,
+        // A new case has no deposit on file yet; leave the comparison out rather than compare to $0.
+        ...(toCents(c.depositPremium, "depositPremium") > 0n ? { depositPremium: c.depositPremium } : {}),
       },
       { tenant },
     );

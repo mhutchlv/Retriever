@@ -11,9 +11,11 @@ import { ENGINE_VERSION } from "../engine/version.ts";
 import type { LeadSink } from "../leads/store.ts";
 import { Auth, clearedCookie, readCookie, SESSION_COOKIE, sessionCookie, type SessionUser } from "../auth/auth.ts";
 import { workspaceChat } from "../workspace/penny.ts";
-import { insuredChat, insuredView, linkedCase, removeFile, saveAnswers, submit as submitRecords, upload as insuredUpload } from "../workspace/insured.ts";
+import { insuredChat, insuredView, linkedCase, removeFile, saveAnswers, submit as submitRecords, upload as insuredUpload, type PortalCtx } from "../workspace/insured.ts";
 import { computeCase, type Case } from "../workspace/model.ts";
 import { coiRequestText, reportHtml, worksheetCsv } from "../workspace/exports.ts";
+import { parseNewCase } from "../workspace/newcase.ts";
+import { directorBoard } from "../workspace/director.ts";
 import { parseAction, tenantFor, verifyTimeline, WorkspaceStore } from "../workspace/store.ts";
 import type { RunLog } from "../runlog/store.ts";
 
@@ -271,31 +273,40 @@ export function createApp({
 
     // A business account sees only its own audit, through the insured portal.
     if (path.startsWith("/api/insured/")) {
-      if (user.role !== "business" || !user.linkedCase) throw new HttpError(403, "This account doesn't have an audit portal.");
-      const { owner, caseId } = linkedCase(user);
+      // An auditor can open the insured's view of any of their own cases (?case=ID) to see what the insured sees.
+      let ctx: PortalCtx;
+      if (user.role === "business") {
+        if (!user.linkedCase) throw new HttpError(403, "This account doesn't have an audit portal.");
+        ctx = { ...linkedCase(user), user };
+      } else {
+        const asked = new URL(req.url ?? "/", "http://localhost").searchParams.get("case") ?? "";
+        if (!/^[A-Za-z0-9-]{1,30}$/.test(asked) || !workspace.get(user.username, asked)) throw new HttpError(403, "Open the insured view from one of your cases.");
+        ctx = { owner: user.username, caseId: asked, user: { ...user, displayName: `${user.displayName} (insured view)` } };
+      }
+      const { owner, caseId } = ctx;
       const view = () => {
         const c = workspace.get(owner, caseId);
         if (!c) throw new HttpError(404, "Your audit isn't available right now.");
-        const { view: v, run } = insuredView(c, user, owner, auth.displayNameOf(c.assignee) ?? c.assignee);
+        const { view: v, run } = insuredView(c, ctx.user, owner, auth.displayNameOf(c.assignee) ?? c.assignee);
         const [r] = receiptsOf([run]);
-        return { ...v, receipt: { runId: r!.runId, fingerprint: r!.fingerprint, dataStatus: r!.dataStatus } };
+        return { ...v, receipt: { runId: r!.runId, fingerprint: r!.fingerprint, dataStatus: r!.dataStatus }, ...(user.role !== "business" ? { previewFor: { caseId, auditor: user.displayName } } : {}) };
       };
       if (method === "GET" && path === "/api/insured/case") return send(res, 200, view());
       if (method === "POST" && path === "/api/insured/upload") {
-        insuredUpload(workspace, user, await readJson(req));
+        insuredUpload(workspace, ctx, await readJson(req));
         return send(res, 200, view());
       }
       const rm = path.match(/^\/api\/insured\/files\/(D\d{1,4})\/remove$/);
       if (method === "POST" && rm) {
-        removeFile(workspace, user, rm[1]!);
+        removeFile(workspace, ctx, rm[1]!);
         return send(res, 200, view());
       }
       if (method === "POST" && path === "/api/insured/answers") {
-        saveAnswers(workspace, user, await readJson(req));
+        saveAnswers(workspace, ctx, await readJson(req));
         return send(res, 200, view());
       }
       if (method === "POST" && path === "/api/insured/submit") {
-        submitRecords(workspace, user);
+        submitRecords(workspace, ctx);
         return send(res, 200, view());
       }
       if (method === "POST" && path === "/api/insured/chat") {
@@ -306,7 +317,7 @@ export function createApp({
         if (!ticket.ok) return send(res, 200, { reply: fallbackNotice(ticket.reason) });
         const cost: ModelCost = { micros: 0, calls: 0 };
         try {
-          const out = await insuredChat(history, user, workspace, cost);
+          const out = await insuredChat(history, ctx, workspace, cost);
           return send(res, 200, { reply: out.reply });
         } catch (err) {
           console.error("insured chat failed", err);
@@ -319,8 +330,14 @@ export function createApp({
     }
     if (user.role === "business") throw new HttpError(403, "This account uses the audit portal.");
 
+    if (method === "GET" && path === "/api/director/board") return send(res, 200, directorBoard(user, workspace));
+
     if (method === "GET" && path === "/api/workspace/cases") {
       return send(res, 200, { user, cases: workspace.cases(user.username).map((c) => caseSummary(user, c)) });
+    }
+    if (method === "POST" && path === "/api/workspace/cases") {
+      const c = workspace.create(user.username, parseNewCase(await readJson(req)), user.displayName);
+      return send(res, 200, { id: c.id, cases: workspace.cases(user.username).map((x) => caseSummary(user, x)) });
     }
     if (method === "POST" && path === "/api/workspace/reset") {
       workspace.reset(user.username);
@@ -389,7 +406,7 @@ export function createApp({
       return send(res, 200, { ok: true, engineVersion: ENGINE_VERSION, chat: useModel ? "model" : "rules" });
     }
 
-    if (path.startsWith("/api/auth/") || path.startsWith("/api/workspace/") || path.startsWith("/api/insured/")) {
+    if (path.startsWith("/api/auth/") || path.startsWith("/api/workspace/") || path.startsWith("/api/insured/") || path.startsWith("/api/director/")) {
       return handleWorkspace(req, res, path, method);
     }
 

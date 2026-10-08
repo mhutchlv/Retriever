@@ -100,3 +100,6 @@ body.insapp .center>*{width:100%;max-width:860px;margin-left:auto;margin-right:a
   .btn.lg{align-self:stretch;justify-content:center}
   .toasts{bottom:84px}
 }
+
+.asinsured{margin:0 0 12px}
+.asinsured a{font-weight:600;margin-left:4px}

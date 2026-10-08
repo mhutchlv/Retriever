@@ -37,8 +37,11 @@
     $("toasts").appendChild(el);
     setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, bad ? 6000 : 3500);
   }
+  // An auditor can open this portal for one of their cases (?case=ID) to see what the insured sees.
+  var CASE = (function () { try { return new URLSearchParams(location.search).get("case") || ""; } catch (e) { return ""; } })();
   function api(path, opts) {
     opts = opts || {};
+    if (CASE && path.indexOf("/api/insured/") === 0) path += (path.indexOf("?") < 0 ? "?" : "&") + "case=" + encodeURIComponent(CASE);
     return fetch(path, {
       method: opts.body !== undefined ? "POST" : "GET",
       credentials: "same-origin",
@@ -279,7 +282,8 @@
     logEl.scrollTop = logEl.scrollHeight;
   }
   function greet() {
-    var first = String((S.user && (S.user.displayName || S.user.username)) || "there").split(/\s+/)[0];
+    var who = S.user && S.user.role !== "business" && S.view ? S.view.business.contact : (S.user && (S.user.displayName || S.user.username));
+    var first = String(who || "there").split(/[\s,]+/)[0];
     addMsg("assistant", "Hi " + first + ". I can explain any item on your list, what an auditor looks for, or what happens next. What would you like to know?");
   }
   function sendChat(text) {
@@ -324,11 +328,22 @@
 
   /* ---------- start ---------- */
   api("/api/auth/me").then(function (me) {
-    if (!me.user || me.user.role !== "business") { location.replace("/workspace.html"); return new Promise(function () {}); }
+    if (!me.user || (me.user.role !== "business" && !CASE)) { location.replace("/workspace.html"); return new Promise(function () {}); }
     S.user = me.user;
     $("who").textContent = me.user.displayName || me.user.username;
-    greet();
     return api("/api/insured/case");
-  }).then(function (v) { setView(v, false); })
+  }).then(function (v) {
+    setView(v, false);
+    if (v.previewFor) {
+      var note = document.querySelector(".previewnote");
+      var bar = document.createElement("div");
+      bar.className = "callout warn asinsured";
+      bar.setAttribute("role", "note");
+      bar.innerHTML = "<b>Insured view.</b> This is " + esc(v.business.name) + "'s portal, the way " + esc(v.business.contact) + " sees it. Anything you do here is recorded as you, in insured view. " +
+        '<a href="workspace.html#case=' + encodeURIComponent(v.previewFor.caseId) + '">Back to the auditor workspace</a>';
+      if (note && note.parentNode) note.parentNode.insertBefore(bar, note);
+    }
+    greet();
+  })
     .catch(function (e) { app.innerHTML = '<div class="callout bad">' + esc(e.message) + "</div>"; });
 })();

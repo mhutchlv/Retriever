@@ -4,31 +4,31 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Sign in | Penny by Propono</title>
+<title>Director | Penny by Propono</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&amp;family=IBM+Plex+Mono:wght@500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="penny.css">
 <link rel="stylesheet" href="workspace.css?v=20261009a">
+<link rel="stylesheet" href="director.css?v=20261009a">
 </head>
-<body class="loginpage">
-<main class="logincard">
+<body class="wsapp dirapp">
+<header class="wstop">
 <a class="brand" href="index.html">
 <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="15" fill="none" stroke="#A9481F" stroke-width="2.5"/><circle cx="17" cy="17" r="10" fill="none" stroke="#A9481F" stroke-width="1.2"/><path d="M14 23V11h4.2a3.4 3.4 0 0 1 0 6.8H14" fill="none" stroke="#A9481F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-<b>Penny</b><small>by Propono</small>
+<b>Penny</b><small>Director</small>
 </a>
-<h1>Sign in to your audit workspace</h1>
-<form id="loginform" novalidate>
-<label for="username">Username</label>
-<input id="username" name="username" type="text" autocomplete="username" required autofocus>
-<label for="password">Password</label>
-<input id="password" name="password" type="password" autocomplete="current-password" required>
-<div id="loginerr" class="callout bad" role="alert" hidden></div>
-<button class="btn" type="submit" id="loginbtn">Sign in</button>
-</form>
-<p class="small muted">Preview workspace: sample data only. Don't enter client information.</p>
+<nav class="viewswitch" id="viewswitch" aria-label="Switch view" hidden><a href="workspace.html" data-view="auditor">Auditor</a><a href="insured.html" data-view="insured">Insured</a><a href="director.html" data-view="director">Director</a></nav>
+<span class="pill">Preview · sample data only</span>
+<span class="spacer"></span>
+<span id="who" class="who small"></span>
+<button class="btn ghost sm" id="signout" type="button">Sign out</button>
+</header>
+<main class="dirmain" id="main" tabindex="-1">
+<p class="muted">Loading…</p>
 </main>
-<footer><nav><a href="privacy.html">Privacy</a> <a href="terms.html">Terms</a> <a href="security.html">Security</a></nav></footer>
-<script src="login.js?v=20261009a"></script>
+<div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+<script src="viewswitch.js?v=20261009a"></script>
+<script src="director.js?v=20261009a"></script>
 </body>
 </html>

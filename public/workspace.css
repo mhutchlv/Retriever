@@ -236,3 +236,23 @@ table.ws .btn.sm,table.ws .iconbtn{white-space:nowrap}
 .casetools input,.casetools select{border:1px solid #CFCAC1;border-radius:var(--r-s);padding:7px 10px;font:inherit;font-size:14px;min-height:36px;background:#fff;color:var(--ink);width:100%}
 .castsort{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);white-space:nowrap}
 .castsort select{flex:1}
+/* auditor / insured / director switch */
+.viewswitch{display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:3px}
+.viewswitch[hidden]{display:none}
+.viewswitch a{font-size:13px;font-weight:600;color:var(--body);text-decoration:none;padding:5px 12px;border-radius:999px;line-height:1.2}
+.viewswitch a:hover{background:#fff;color:var(--ink)}
+.viewswitch a[aria-current="page"]{background:var(--cu);color:#fff}
+.viewswitch a:focus-visible{outline:3px solid var(--cu);outline-offset:2px}
+/* new case form */
+.ncgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px}
+.ncgrid .full{grid-column:1 / -1}
+.ncgrid fieldset{border:none;padding:0;margin:0;display:contents}
+.ncgrid legend{grid-column:1 / -1;font-weight:600;font-size:14px;color:var(--ink);margin-top:6px}
+.modalcard select{border:1px solid #CFCAC1;border-radius:var(--r-s);padding:9px 11px;font:inherit;font-size:14px;color:var(--ink);background:#fff}
+.modalcard input:not([readonly]),.modalcard textarea:not([readonly]){background:#fff}
+.ncfiles{border:2px dashed var(--line);border-radius:var(--r-s);padding:14px;text-align:center;font-size:14px;color:var(--muted)}
+.ncfiles.over{border-color:var(--cu);background:var(--cu-tint)}
+.ncfiles ul{list-style:none;margin:8px 0 0;padding:0;text-align:left;font-size:13px;color:var(--body)}
+.modalcard .err{color:#B42318;font-size:13px;min-height:1em}
+@media (max-width:640px){.ncgrid{grid-template-columns:1fr}}
+@media (max-width:719px){.viewswitch{order:5;width:100%;justify-content:center}}

@@ -37,6 +37,13 @@ export interface InsuredFile {
   removable: boolean;
 }
 
+/** Whose case the portal shows, and who is acting in it. */
+export interface PortalCtx {
+  owner: string;
+  caseId: string;
+  user: SessionUser;
+}
+
 /** Resolve a business account to its case. Throws 403-worthy errors for anything else. */
 export function linkedCase(user: SessionUser): { owner: string; caseId: string } {
   if (user.role !== "business" || !user.linkedCase) throw new InputError("account", "this account has no audit linked to it");
@@ -154,8 +161,8 @@ function itemLabel(c: Case, owner: string, user: SessionUser, item: string): str
   throw new InputError("item", "that isn't on your list");
 }
 
-export function upload(store: WorkspaceStore, user: SessionUser, raw: unknown) {
-  const { owner, caseId } = linkedCase(user);
+export function upload(store: WorkspaceStore, ctx: PortalCtx, raw: unknown) {
+  const { owner, caseId, user } = ctx;
   const o = asObject(raw);
   const item = typeof o.item === "string" ? o.item : "";
   const files = asArray(o.files, "files", { min: 1, max: MAX_FILES }).map((f, i) => {
@@ -181,8 +188,8 @@ export function upload(store: WorkspaceStore, user: SessionUser, raw: unknown) {
   });
 }
 
-export function removeFile(store: WorkspaceStore, user: SessionUser, docId: string) {
-  const { owner, caseId } = linkedCase(user);
+export function removeFile(store: WorkspaceStore, ctx: PortalCtx, docId: string) {
+  const { owner, caseId, user } = ctx;
   store.update(owner, caseId, user.displayName, "insured", (c) => {
     const d = c.documents.find((x) => x.id === docId && !x.removed);
     if (!d || d.uploadedBy !== user.displayName) throw new InputError("file", "you can only remove files you added");
@@ -192,8 +199,8 @@ export function removeFile(store: WorkspaceStore, user: SessionUser, docId: stri
   });
 }
 
-export function saveAnswers(store: WorkspaceStore, user: SessionUser, raw: unknown) {
-  const { owner, caseId } = linkedCase(user);
+export function saveAnswers(store: WorkspaceStore, ctx: PortalCtx, raw: unknown) {
+  const { owner, caseId, user } = ctx;
   const given = asObject(asObject(raw).answers ?? {}, "answers");
   const answers: Partial<Record<QuestionId, boolean>> = {};
   for (const q of QUESTIONS) if (typeof given[q.id] === "boolean") answers[q.id] = given[q.id] as boolean;
@@ -205,8 +212,8 @@ export function saveAnswers(store: WorkspaceStore, user: SessionUser, raw: unkno
   });
 }
 
-export function submit(store: WorkspaceStore, user: SessionUser) {
-  const { owner, caseId } = linkedCase(user);
+export function submit(store: WorkspaceStore, ctx: PortalCtx) {
+  const { owner, caseId, user } = ctx;
   store.update(owner, caseId, user.displayName, "insured", (c) => {
     const v = insuredView(c, user, owner).view;
     if (c.intake?.submittedAt) throw new InputError("submit", "your records were already sent");
@@ -236,9 +243,9 @@ What you do:
 
 let client: Anthropic | undefined;
 
-export async function insuredChat(history: ChatTurn[], user: SessionUser, store: WorkspaceStore, cost: ModelCost): Promise<{ reply: string; run: RunRecord }> {
+export async function insuredChat(history: ChatTurn[], ctx: PortalCtx, store: WorkspaceStore, cost: ModelCost): Promise<{ reply: string; run: RunRecord }> {
   client ??= new Anthropic({ timeout: 60_000, maxRetries: 1 });
-  const { owner, caseId } = linkedCase(user);
+  const { owner, caseId, user } = ctx;
   const c = store.get(owner, caseId);
   if (!c) throw new InputError("case", "not found");
   const { view, run } = insuredView(c, user, owner);

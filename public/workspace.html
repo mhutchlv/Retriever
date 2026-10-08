@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&amp;family=IBM+Plex+Mono:wght@500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="penny.css">
-<link rel="stylesheet" href="workspace.css?v=20261008d">
+<link rel="stylesheet" href="workspace.css?v=20261009a">
 </head>
 <body class="wsapp">
 <header class="wstop">
@@ -18,8 +18,10 @@
 <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="15" fill="none" stroke="#A9481F" stroke-width="2.5"/><circle cx="17" cy="17" r="10" fill="none" stroke="#A9481F" stroke-width="1.2"/><path d="M14 23V11h4.2a3.4 3.4 0 0 1 0 6.8H14" fill="none" stroke="#A9481F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 <b>Penny</b><small>Workspace</small>
 </a>
+<nav class="viewswitch" id="viewswitch" aria-label="Switch view" hidden><a href="workspace.html" data-view="auditor">Auditor</a><a href="insured.html" data-view="insured">Insured</a><a href="director.html" data-view="director">Director</a></nav>
 <span class="pill">Preview · sample data only</span>
 <span class="spacer"></span>
+<button class="btn sm" id="newcase" type="button">New case</button>
 <span id="who" class="who small"></span>
 <button class="btn ghost sm" id="signout" type="button">Sign out</button>
 </header>
@@ -64,6 +66,7 @@
 </div>
 <button class="fab" id="fab" type="button">Ask Penny</button>
 <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
-<script src="workspace.js?v=20261008d"></script>
+<script src="viewswitch.js?v=20261009a"></script>
+<script src="workspace.js?v=20261009a"></script>
 </body>
 </html>

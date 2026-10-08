@@ -5,6 +5,7 @@ import { InputError, toCents, formatScaled } from "../engine/money.ts";
 import { asObject, classCode, optString, reqString } from "../engine/validate.ts";
 import { AUDIT_STATUSES, computeCase, type AuditStatus, type Case, type TimelineEvent } from "./model.ts";
 import { sampleCases } from "./seed.ts";
+import { buildCase, caseIdFor, type NewCaseInput } from "./newcase.ts";
 
 // Workspace actions: the one way a case changes, used by the buttons and by
 // Penny alike. Each applied action appends a hash-chained timeline event with
@@ -367,6 +368,17 @@ export class WorkspaceStore {
     list[list.indexOf(c)] = work;
     this.save();
     return event;
+  }
+
+  /** Open a new case for this auditor. */
+  create(username: string, input: NewCaseInput, actor: string): Case {
+    const list = this.cases(username);
+    const id = caseIdFor(input.insured, input.policyEffectiveDate, new Set(list.map((c) => c.id)));
+    const c: Case = { ...buildCase(input, id, username, actor), timeline: [] };
+    appendEvent(c, { at: new Date().toISOString(), actor, via: "workspace", action: "created", summary: `Case opened for ${c.insured}${input.files.length ? ` with ${input.files.length} document${input.files.length === 1 ? "" : "s"}` : ""}` });
+    list.push(c);
+    this.save();
+    return c;
   }
 
   /** Put the sample cases back to their starting point. */
