@@ -163,7 +163,7 @@ export async function modelChat(history: ChatTurn[], tenant: string, cost: Model
     }
     if (response.stop_reason === "max_tokens") {
       const partial = response.content.filter((b): b is Anthropic.Beta.BetaTextBlock => b.type === "text").map((b) => b.text).join("\n").trim();
-      return { reply: (partial ? partial + "\n\n" : "") + "(That answer ran long. Ask me to continue or narrow the question.)", runs, ...ui, mode: "model" };
+      return { reply: (partial ? plain(partial) + "\n\n" : "") + "(That answer ran long. Ask me to continue or narrow the question.)", runs, ...ui, mode: "model" };
     }
 
     const text = response.content

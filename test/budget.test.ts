@@ -4,7 +4,7 @@ import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ChatBudget, costMicros, limitsFromEnv, SONNET_5_5 } from "../src/chat/budget.ts";
-import { trimHistory, type ChatTurn } from "../src/chat/claude.ts";
+import { plain, trimHistory, type ChatTurn } from "../src/chat/claude.ts";
 
 const limits = { dailyUsd: 1, perVisitorUsd: 0.1, perVisitorMessages: 3, maxConcurrent: 2 };
 
@@ -96,4 +96,8 @@ test("sends only recent turns to the model, starting with the visitor", () => {
   const trimmed = trimHistory(huge);
   assert.equal(trimmed.at(-1)?.content, "latest");
   assert.ok(trimmed.reduce((n, t) => n + t.content.length, 0) <= 12_000);
+});
+
+test("strips markdown emphasis and headings from model replies", () => {
+  assert.equal(plain("## Records\nKeep **payroll registers** and 941s."), "Records\nKeep payroll registers and 941s.");
 });
