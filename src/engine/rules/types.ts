@@ -8,7 +8,7 @@
  */
 export type DataStatus = "verified" | "sample";
 
-export type RuleSetId = "jurisdictions" | "class-codes" | "officer-payroll" | "audit-checklist";
+export type RuleSetId = "jurisdictions" | "class-codes" | "officer-payroll" | "audit-checklist" | "payroll-caps";
 
 export interface RuleSet<T> {
   id: RuleSetId;

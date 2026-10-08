@@ -1,13 +1,23 @@
 import { auditChecklist2026 } from "./checklist.ts";
 import { classCodes2026 } from "./classCodes.ts";
 import { jurisdictions2026 } from "./jurisdictions.ts";
-import { officerPayroll2026 } from "./officerPayroll.ts";
+import { officerPayroll2026, officerPayroll2026v2 } from "./officerPayroll.ts";
+import { payrollCaps2026, payrollCaps2026Oct } from "./payrollCaps.ts";
 import type { RuleRef, RuleSet, RuleSetId } from "./types.ts";
 
 // Every version ever shipped stays in this list. Results are reproduced by
 // looking up the exact version they recorded, so old versions are never edited
 // or removed; corrections ship as a new version.
-const ALL: RuleSet<unknown>[] = [jurisdictions2026, classCodes2026, officerPayroll2026, auditChecklist2026];
+// When two versions share an effective date, the one listed later wins.
+const ALL: RuleSet<unknown>[] = [
+  jurisdictions2026,
+  classCodes2026,
+  officerPayroll2026,
+  officerPayroll2026v2,
+  auditChecklist2026,
+  payrollCaps2026,
+  payrollCaps2026Oct,
+];
 
 function versionsOf(id: RuleSetId): RuleSet<unknown>[] {
   return ALL.filter((s) => s.id === id).sort((a, b) => a.effectiveFrom.localeCompare(b.effectiveFrom));

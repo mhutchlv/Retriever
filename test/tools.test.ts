@@ -90,7 +90,7 @@ describe("officer payroll", () => {
     runTool("officer_payroll", { state: "NV", policyEffectiveDate: date, ...input }, { tenant }).output as OfficerPayrollOutput;
 
   it("never applies sample limits as a state's figures", () => {
-    const out = run({ entityType: "corporation", people: [{ name: "Low", actualPayroll: "10000" }] });
+    const out = run({ state: "AZ", entityType: "corporation", people: [{ name: "Low", actualPayroll: "10000" }] });
     assert.equal(out.limits.source, "none on file");
     assert.equal(out.people[0]!.countedPayroll.cents, 1000000);
     assert.match(out.warnings.join(" "), /hasn't loaded verified/);
@@ -143,10 +143,53 @@ describe("officer payroll", () => {
     assert.equal(out.people[0]!.countedPayroll.cents, 5000000);
   });
 
+  it("applies Nevada's verified officer limits with citations", () => {
+    const out = run({
+      entityType: "corporation",
+      people: [
+        { name: "Unpaid", actualPayroll: "0" },
+        { name: "High", actualPayroll: "120000" },
+        { name: "Mid", actualPayroll: "20000" },
+      ],
+    });
+    assert.equal(out.limits.source, "state table");
+    assert.deepEqual(out.people.map((p) => p.countedPayroll.cents), [600000, 3600000, 2000000]);
+    assert.ok(out.stateRules?.citations.some((c) => c.startsWith("NRS 616B.624")));
+  });
+
+  it("counts a Nevada sole proprietor at the deemed wage they elected", () => {
+    const base = { entityType: "sole_proprietor", people: [{ name: "Owner", actualPayroll: "80000", status: "included" }] };
+    assert.equal(run(base).people[0]!.countedPayroll.display, "$3,600.00");
+    assert.equal(run({ ...base, soleProprietorHigherWage: true }).people[0]!.countedPayroll.display, "$21,600.00");
+  });
+
+  it("shows actual pay for a Nevada partner, since no amount is verified", () => {
+    const out = run({ entityType: "partnership", people: [{ name: "P", actualPayroll: "50000", status: "included" }] });
+    assert.equal(out.people[0]!.countedPayroll.cents, 5000000);
+    assert.match(out.warnings.join(" "), /verified NV amount for an included partner/);
+  });
+
   it("says so when a state has no limits on file", () => {
     const out = run({ state: "OK", entityType: "corporation", people: [{ name: "A", actualPayroll: "12345.67" }] });
     assert.equal(out.limits.source, "none on file");
     assert.equal(out.people[0]!.countedPayroll.cents, 1234567);
+  });
+});
+
+describe("Nevada payroll cap", () => {
+  const estimate = (policyEffectiveDate: string) =>
+    (runTool("audit_bill_estimator", { state: "NV", policyEffectiveDate, lines: [{ classCode: "8810", payroll: "100000", rate: "0.3" }] }, { tenant })
+      .output as EstimatorOutput).warnings.join(" ");
+
+  it("notes the per-employee cap in force for the policy date", () => {
+    assert.match(estimate("2026-07-01"), /\$36,000 of any one employee/);
+    assert.match(estimate("2026-10-01"), /\$98,433\.60/);
+  });
+
+  it("adds nothing for states without a cap", () => {
+    const w = (runTool("audit_bill_estimator", { state: "AZ", policyEffectiveDate: date, lines: [{ classCode: "8810", payroll: "100000", rate: "0.3" }] }, { tenant })
+      .output as EstimatorOutput).warnings;
+    assert.ok(!w.some((x) => /per policy year/.test(x)));
   });
 });
 

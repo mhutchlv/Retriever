@@ -1,5 +1,6 @@
 import { divRound, formatScaled, InputError, money, toCents, toScaled, type Money } from "../money.ts";
 import type { Jurisdiction } from "../rules/jurisdictions.ts";
+import type { PayrollCap } from "../rules/payrollCaps.ts";
 import type { RuleBook } from "../rules/registry.ts";
 import { asArray, asObject, asOfDate, classCode, optString, reqString, stateCode } from "../validate.ts";
 import type { NormalizedInput, Tool } from "./types.ts";
@@ -84,7 +85,7 @@ export const auditEstimator: Tool<Input, EstimatorOutput> = {
     required: ["state", "lines"],
     additionalProperties: false,
   },
-  ruleSets: ["jurisdictions"],
+  ruleSets: ["jurisdictions", "payroll-caps"],
 
   normalize(raw) {
     const o = asObject(raw);
@@ -132,6 +133,9 @@ export const auditEstimator: Tool<Input, EstimatorOutput> = {
     if (!place) throw new InputError("state", `${input.state} is not a recognized state`);
     const warnings: string[] = [];
     if (place.monopolistic) warnings.push(`${place.name} is a monopolistic state fund state; its audits follow the fund's own rules.`);
+    const caps = rules.get<Record<string, PayrollCap>>("payroll-caps");
+    const cap = caps.status === "verified" ? caps.data[input.state] : undefined;
+    if (cap) warnings.push(`${cap.note} Enter each class's payroll with every employee already capped. (${cap.citations.join("; ")})`);
 
     const mod = toScaled(input.experienceMod, MOD_SCALE, "experienceMod");
     const sched = toScaled(input.scheduleRatingPct, PCT_SCALE, "scheduleRatingPct");

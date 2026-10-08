@@ -1,5 +1,5 @@
 import { divRound, formatScaled, InputError, money, toCents, type Money } from "../money.ts";
-import type { OfficerLimits } from "../rules/officerPayroll.ts";
+import type { OfficerLimits, StateOwnerRules } from "../rules/officerPayroll.ts";
 import type { RuleBook } from "../rules/registry.ts";
 import { asArray, asObject, asOfDate, optEnum, reqString, stateCode } from "../validate.ts";
 import type { NormalizedInput, Tool } from "./types.ts";
@@ -20,12 +20,15 @@ interface Input extends NormalizedInput {
   policyTermDays: number;
   people: Person[];
   limitsOverride?: OfficerLimits;
+  soleProprietorHigherWage?: boolean;
 }
 
 export interface OfficerPayrollOutput {
   people: { name: string; status: string; actualPayroll: Money; countedPayroll: Money; reason: string }[];
   totalCountedPayroll: Money;
   limits: { source: "state table" | "entered by user" | "none on file"; minimum?: Money; maximum?: Money; ownerAmount?: Money; proratedFor: string };
+  /** State rules that apply, with where they come from. Present when Penny has verified rules for the state. */
+  stateRules?: { notes: string[]; citations: string[] };
   warnings: string[];
 }
 
@@ -37,7 +40,8 @@ export const officerPayroll: Tool<Input, OfficerPayrollOutput> = {
   description:
     "Work out how much officer or owner payroll counts on a workers' comp audit: excluded people count as zero, included officers are " +
     "raised to the state minimum or capped at the maximum (prorated for short policy terms), and included sole proprietors or partners " +
-    "count at the state's set amount.",
+    "count at the state's set amount. Verified state limits are applied where Penny has them (Nevada today); elsewhere the " +
+    "visitor can enter their state's limits from the carrier or bureau.",
   inputSchema: {
     type: "object",
     properties: {
@@ -64,6 +68,10 @@ export const officerPayroll: Tool<Input, OfficerPayrollOutput> = {
         properties: { minAnnual: { type: "string" }, maxAnnual: { type: "string" }, ownerAnnual: { type: "string" } },
         required: ["minAnnual", "maxAnnual", "ownerAnnual"],
         additionalProperties: false,
+      },
+      soleProprietorHigherWage: {
+        type: "boolean",
+        description: "Nevada only: the sole proprietor elected the higher deemed wage and paid the extra premium.",
       },
     },
     required: ["state", "entityType", "people"],
@@ -107,31 +115,52 @@ export const officerPayroll: Tool<Input, OfficerPayrollOutput> = {
         };
       }),
       ...(limitsOverride ? { limitsOverride } : {}),
+      ...(o.soleProprietorHigherWage === true ? { soleProprietorHigherWage: true } : {}),
     };
   },
 
   run(input, rules) {
     const warnings: string[] = [];
-    const table = rules.get<Record<string, OfficerLimits>>("officer-payroll");
-    // Only verified limits are ever applied as a state's figures. Sample rows are
+    const table = rules.get<Record<string, unknown>>("officer-payroll");
+    // Only verified rows are ever applied as a state's figures. Sample rows are
     // placeholders and would read as that state's real numbers, so they are not used.
-    const fromTable = table.status === "verified" ? table.data[input.state] : undefined;
-    const limits = input.limitsOverride ?? fromTable;
-    const source = input.limitsOverride ? "entered by user" : fromTable ? "state table" : "none on file";
+    const state = table.status === "verified" ? (table.data[input.state] as StateOwnerRules | undefined) : undefined;
+    const owners = isOwnerEntity(input.entityType);
+
+    let limits: { min: string; max: string; owner?: string } | undefined;
+    if (input.limitsOverride) {
+      limits = { min: input.limitsOverride.minAnnual, max: input.limitsOverride.maxAnnual, owner: input.limitsOverride.ownerAnnual };
+    } else if (state) {
+      const owner =
+        input.entityType === "sole_proprietor"
+          ? input.soleProprietorHigherWage ? state.soleProprietorHigherAnnual : state.soleProprietorAnnual
+          : input.entityType === "partnership" ? state.partnerAnnual : undefined;
+      limits = { min: state.officerMinAnnual, max: state.officerMaxAnnual, ...(owner ? { owner } : {}) };
+      if (owners && !owner) {
+        warnings.push(`Penny doesn't have a verified ${input.state} amount for an included ${input.entityType === "partnership" ? "partner" : "sole proprietor"}, so actual pay is shown. Ask the carrier how they count it.`);
+      }
+    }
+    const source = input.limitsOverride ? "entered by user" : state ? "state table" : "none on file";
     if (source === "none on file") {
       warnings.push(
         `Penny hasn't loaded verified officer and owner payroll limits for ${input.state} yet, so no state minimum, maximum or owner amount is applied. Actual payroll is shown. Ask your carrier or the state's rating bureau for the current limits and enter them to apply them.`,
       );
     }
     if (input.entityType === "llc") {
-      warnings.push("LLC members are treated like corporate officers here. Some states treat members like partners; check the state rule.");
+      warnings.push(
+        state?.llcManagersAsOfficers && !input.limitsOverride
+          ? `${input.state} treats LLC managers like officers. Penny hasn't verified a rule for members who aren't managers; check with the carrier.`
+          : "LLC members are treated like corporate officers here. Some states treat members like partners; check the state rule.",
+      );
+    }
+    if (limits && input.policyTermDays !== 365) {
+      warnings.push(`Limits are prorated for a ${input.policyTermDays}-day term. Confirm the carrier prorates them the same way.`);
     }
 
     const prorate = (annual: string) => divRound(toCents(annual, "limit") * BigInt(input.policyTermDays), 365n);
-    const min = limits ? prorate(limits.minAnnual) : undefined;
-    const max = limits ? prorate(limits.maxAnnual) : undefined;
-    const owner = limits ? prorate(limits.ownerAnnual) : undefined;
-    const owners = isOwnerEntity(input.entityType);
+    const min = limits ? prorate(limits.min) : undefined;
+    const max = limits ? prorate(limits.max) : undefined;
+    const owner = limits?.owner ? prorate(limits.owner) : undefined;
 
     const people = input.people.map((p) => {
       const actual = toCents(p.actualPayroll, "actualPayroll");
@@ -142,9 +171,11 @@ export const officerPayroll: Tool<Input, OfficerPayrollOutput> = {
         reason = owners
           ? "Owner has not elected coverage, so no payroll is counted."
           : "Excluded from coverage, so no payroll is counted. The exclusion must be on file for the policy period.";
-      } else if (owners && owner !== undefined) {
-        counted = owner;
-        reason = "Included owners count at the state's set amount, regardless of what they drew.";
+      } else if (owners) {
+        if (owner !== undefined) {
+          counted = owner;
+          reason = "Included owners count at the state's set amount, regardless of what they drew.";
+        }
       } else if (min !== undefined && max !== undefined) {
         if (actual < min) {
           counted = min;
@@ -162,11 +193,12 @@ export const officerPayroll: Tool<Input, OfficerPayrollOutput> = {
       totalCountedPayroll: money(people.reduce((s, p) => s + p.counted, 0n)),
       limits: {
         source,
-        ...(min !== undefined ? { minimum: money(min) } : {}),
-        ...(max !== undefined ? { maximum: money(max) } : {}),
+        ...(min !== undefined && !owners ? { minimum: money(min) } : {}),
+        ...(max !== undefined && !owners ? { maximum: money(max) } : {}),
         ...(owner !== undefined ? { ownerAmount: money(owner) } : {}),
         proratedFor: `${input.policyTermDays}-day term`,
       },
+      ...(state && !input.limitsOverride ? { stateRules: { notes: state.notes, citations: state.citations } } : {}),
       warnings,
     };
   },
