@@ -9,7 +9,7 @@ Phase 1 (Foundation) is built and deploying to Azure Container Apps (rg-penny) a
 Read README.md, docs/ARCHITECTURE.md, docs/DEPLOY-AZURE.md and CLAUDE.md before changing anything. CLAUDE.md rules are not optional: pure tools, bigint money, never edit a shipped rule version, label sample data, every figure from the engine, no contact details through the model, no "automate/automation/automated" in auditor or carrier copy, accuracy not lower premiums, "neutral first review" never "arbiter".
 
 ## Next sprint (do in this order)
-1. Privacy policy and terms pages, linked from the sign-up form and footer. We collect emails on a public page; this comes first. Draft them; DECISION: Mark approves wording.
+1. Privacy policy and terms pages, linked from the sign-up form and footer. We collect emails on a public page; this comes first. Terms must cover, per the GTM plan's risk table: results are a second look with no guarantee; no promise of lower premium; Pro and Max are individual licenses (company-wide use needs Team or enterprise); data-handling terms for contract auditors bound by carrier confidentiality, with carriers able to allow or block use; NCCI content excluded. Tech E&O to be placed through Statement Insurance before paid plans. Draft them; DECISION: Mark approves wording.
 2. Lead alerts: create a Teams incoming webhook or Power Automate HTTP flow and set PENNY_LEAD_WEBHOOK through deploy.sh. Test with one sign-up.
 3. CI: GitHub Actions running npm run check on every PR. Then a deploy workflow on merge to main using Azure OIDC federated credentials (no stored secrets) that runs deploy/azure/deploy.sh.
 4. Monitoring: Log Analytics workspace on penny-env, an availability test on /api/health, alert to Mark on failure.
@@ -35,10 +35,12 @@ Then:
 6. Remuneration include/exclude lookup: 40 to 60 pay items (tips, per diem, severance, sick pay, 401(k), Section 125) by state, in our own words.
 7. Officer and owner payroll limits by state and effective date (same work as sprint item 6, verified data).
 
+Signed-in free tools (already decided in the Penny Product and GTM Plan, Oct 6: free with a login, cents per run because Claude reads the documents):
+8. Subcontractor certificate checker: reads a COI, checks WC coverage and dates against when the sub was paid, totals the uninsured portion.
+9. 941 reconciliation check: quarterly 941s (plus 940 and state wage reports) vs the payroll summary, flags gaps.
+
 Overlap with Pro (DECISION: Mark chooses the fence; recommended: free single calculation, Pro adds the case workspace, saved history and exports):
-8. Overtime exclusion calculator with state exceptions.
-9. Subcontractor certificate date checker (uninsured portion by payment date).
-10. Payroll tax reconciler (941, 940, state wage reports vs the register).
+10. Overtime exclusion calculator with state exceptions.
 11. Multi-state payroll allocator.
 
 Skip for now: experience mod explainer and premium discount tables (NCCI licensed values), field route planner (paid routing API).
@@ -85,6 +87,13 @@ Goal: first carrier live; measure the share of disputes closed without an audito
 
 ## Phase 5: Standalone Audit Review and integrations
 After legal sign-off: standalone Audit Review (consider a separate brand), white-label and API (keys, rate limits, per-review billing, revenue share), payroll provider integrations ("Send to Penny" from Gusto, ADP, Paychex).
+
+## Source documents
+- Penny: Product and Go-to-Market Plan (Oct 6, 2026): positioning, audiences, lineup, pricing, unit economics, guardrails, risks, roadmap, metrics. This build plan implements it.
+- Propono Systems Claude Context (Box, Propono folder): venture-level facts and decisions.
+
+## Metrics to instrument (from the GTM plan)
+Free tools: monthly users, sign-ups from tools, cost per tool run. Auditor plans: free-to-paid conversion, audits per user per month, gross margin per plan. Business and partner: partners active, audits per partner, client completion time. Dispute module: share closed without an auditor, time to resolution, auditor approval rate. Consistency: share of reruns that reproduce the same result (target 100%). Funnel: carriers asking for Penny because their auditors or insureds use it.
 
 ## Decisions waiting on Mark
 - Penny's move to Propono infrastructure: owned by Joey, required before client data (decided Oct 8, 2026). The Statement-subscription deploy is a team preview only; until the move, the security page's SOC 2 claim does not describe the preview host.
