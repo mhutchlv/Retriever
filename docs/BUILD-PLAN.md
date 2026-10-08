@@ -1,7 +1,7 @@
 # Penny by Propono: build plan
 
 ## Where things stand
-Phase 1 (Foundation) is built and deploying to Azure Container Apps (rg-penny):
+Phase 1 (Foundation) is built and deploying to Azure Container Apps (rg-penny) as a **team preview**. It runs in Statement Insurance's Azure subscription only for the preview and must never hold client data there. Joey will move Penny into Propono's own infrastructure (subscription, registry, network, SOC 2 controls) before any client data is loaded; everything in Phases 2 to 5 that stores customer data assumes that move is done.
 - Deterministic audit engine: bigint-cent math, versioned rule tables picked by policy date, fingerprinted runs that replay exactly (Verify button), run log that keeps only hashes for free tools.
 - Four free tools: class code lookup/compare, audit bill estimator, officer payroll, document checklist. Class codes and officer limits are SAMPLE data, labeled on every result.
 - Homepage in the preview-site design; chat runs the tools, acts as salesperson (pricing, plans, security, sign-up), plays three engine-backed demos, and collects early-access sign-ups with consent (/api/leads).
@@ -87,7 +87,7 @@ Goal: first carrier live; measure the share of disputes closed without an audito
 After legal sign-off: standalone Audit Review (consider a separate brand), white-label and API (keys, rate limits, per-review billing, revenue share), payroll provider integrations ("Send to Penny" from Gusto, ADP, Paychex).
 
 ## Decisions waiting on Mark
-- Move Penny to a Propono-owned Azure subscription and registry (it's in Statement's for now; the security page's SOC 2 claim assumes Propono's platform).
+- Penny's move to Propono infrastructure: owned by Joey, required before client data (decided Oct 8, 2026). The Statement-subscription deploy is a team preview only; until the move, the security page's SOC 2 claim does not describe the preview host.
 - Domain; NCCI commercial license; legal review; spend cap for Claude chat; privacy and terms wording.
 - "Automation" wording on insurers.html and research.html (settle with Cliff).
 - Joey to verify every security-page claim against the SOC 2 report, and pull real cost per audit once Phase 2 is live.

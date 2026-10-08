@@ -2,6 +2,8 @@
 
 One workspace for everyone who touches a premium audit. It adapts to who is signed in, keeps every document and figure for a case in one place, and keeps Penny in view at all times. Penny answers audit questions, explains the app, and makes changes to the audit when asked. Every change is recorded.
 
+Hosting: the current Azure deploy is a team preview in Statement Insurance's subscription. Joey moves Penny to Propono infrastructure before the workspace stores any client data.
+
 This document is the design target for Phases 2 to 4 in `docs/BUILD-PLAN.md`. The engine rules in `CLAUDE.md` still hold: every figure comes from an engine run, money is bigint cents, rule versions are never edited.
 
 ## Who uses it
