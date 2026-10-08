@@ -2,7 +2,8 @@ import { readFile } from "node:fs/promises";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { extname, join, normalize, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { modelChat, modelConfigured, type ChatTurn } from "../chat/claude.ts";
+import { ChatBudget, fallbackNotice, type DenyReason } from "../chat/budget.ts";
+import { modelChat, modelConfigured, type ChatTurn, type ModelCost } from "../chat/claude.ts";
 import { routeMessage, type ChatReply } from "../chat/router.ts";
 import { isToolName, replayRun, runTool, TOOLS, type RunRecord } from "../engine/engine.ts";
 import { InputError } from "../engine/money.ts";
@@ -106,6 +107,11 @@ export function clientKey(req: IncomingMessage, trustProxy: boolean): string {
   return req.socket.remoteAddress ?? "unknown";
 }
 
+function withNotice(reply: ChatReply, reason: DenyReason): ChatReply {
+  console.log(JSON.stringify({ event: "chat_model_denied", reason }));
+  return { ...reply, reply: `${fallbackNotice(reason)}\n\n${reply.reply}` };
+}
+
 function parseHistory(body: unknown): ChatTurn[] {
   const messages = (body as { messages?: unknown })?.messages;
   if (!Array.isArray(messages) || messages.length === 0 || messages.length > 40) {
@@ -130,9 +136,11 @@ export interface AppOptions {
   useModel?: boolean;
   /** Read the client address from X-Forwarded-For (set when running behind Azure ingress). */
   trustProxy?: boolean;
+  /** Daily spend and message limits for model-answered chat. */
+  budget?: ChatBudget;
 }
 
-export function createApp({ runLog, leads, useModel = modelConfigured(), trustProxy = false }: AppOptions): Server {
+export function createApp({ runLog, leads, useModel = modelConfigured(), trustProxy = false, budget = new ChatBudget() }: AppOptions): Server {
   const toolLimiter = new RateLimiter(60, 60_000);
   const chatLimiter = new RateLimiter(20, 60_000);
   const leadLimiter = new RateLimiter(5, 60_000);
@@ -167,16 +175,25 @@ export function createApp({ runLog, leads, useModel = modelConfigured(), trustPr
     if (method === "POST" && path === "/api/chat") {
       if (!chatLimiter.allow(clientKey(req, trustProxy))) throw new HttpError(429, "Too many messages. Try again in a minute.");
       const history = parseHistory(await readJson(req));
+      const question = history.at(-1)!.content;
       let reply: ChatReply;
       if (useModel) {
-        try {
-          reply = await modelChat(history, TENANT);
-        } catch (err) {
-          console.error("model chat failed; falling back to rules", err);
-          reply = routeMessage(history.at(-1)!.content, TENANT);
+        const ticket = budget.begin(clientKey(req, trustProxy));
+        if (ticket.ok) {
+          const cost: ModelCost = { micros: 0, calls: 0 };
+          try {
+            reply = await modelChat(history, TENANT, cost);
+          } catch (err) {
+            console.error("model chat failed; falling back to rules", err);
+            reply = routeMessage(question, TENANT);
+          } finally {
+            budget.finish(ticket.visitor, cost.micros, cost.calls);
+          }
+        } else {
+          reply = withNotice(routeMessage(question, TENANT), ticket.reason);
         }
       } else {
-        reply = routeMessage(history.at(-1)!.content, TENANT);
+        reply = routeMessage(question, TENANT);
       }
       reply.runs.forEach(record);
       return send(res, 200, {

@@ -15,6 +15,9 @@
 #   ALLOWED_IPS        comma-separated CIDRs; when set, only these can reach the site
 #   ANTHROPIC_API_KEY  turns on model chat; stored as a Container App secret
 #   PENNY_LEAD_WEBHOOK URL that gets each new sign-up (Teams / Power Automate); stored as a secret
+#   PENNY_CHAT_DAILY_USD         whole-site model chat spend per UTC day, dollars (default 10)
+#   PENNY_CHAT_VISITOR_USD       one visitor's model chat spend per day (default 0.50)
+#   PENNY_CHAT_VISITOR_MESSAGES  one visitor's model-answered messages per day (default 40)
 set -euo pipefail
 
 # Git Bash on Windows rewrites arguments that start with "/" (Azure resource IDs) into
@@ -146,6 +149,14 @@ YAML
             value: /data/leads.jsonl
           - name: PENNY_TRUST_PROXY
             value: "1"
+          - name: PENNY_CHAT_BUDGET
+            value: /data/chat-budget.json
+          - name: PENNY_CHAT_DAILY_USD
+            value: "${PENNY_CHAT_DAILY_USD:-10}"
+          - name: PENNY_CHAT_VISITOR_USD
+            value: "${PENNY_CHAT_VISITOR_USD:-0.50}"
+          - name: PENNY_CHAT_VISITOR_MESSAGES
+            value: "${PENNY_CHAT_VISITOR_MESSAGES:-40}"
 YAML
   [[ -n "${ANTHROPIC_API_KEY:-}" ]] && printf '          - name: ANTHROPIC_API_KEY\n            secretRef: anthropic-api-key\n'
   [[ -n "${PENNY_LEAD_WEBHOOK:-}" ]] && printf '          - name: PENNY_LEAD_WEBHOOK\n            secretRef: lead-webhook\n'
