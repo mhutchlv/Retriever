@@ -17,6 +17,10 @@
 #   PENNY_LEAD_WEBHOOK URL that gets each new sign-up (Teams / Power Automate); stored as a secret
 set -euo pipefail
 
+# Git Bash on Windows rewrites arguments that start with "/" (Azure resource IDs) into
+# Windows paths. Turn that off; the script only passes relative file paths to az.
+export MSYS_NO_PATHCONV=1
+
 : "${ACR_NAME:?Set ACR_NAME to the Azure Container Registry name (no .azurecr.io)}"
 RESOURCE_GROUP="${RESOURCE_GROUP:-rg-penny}"
 APP_NAME="${APP_NAME:-penny-web}"
@@ -84,8 +88,9 @@ if [[ "$DRY_RUN" == "1" ]] || [[ -z "$(az role assignment list --assignee "$IDEN
 fi
 
 # 6. The app itself, from a generated spec (secrets live only in this temp file, removed on exit).
+# Relative path so az can read it on Windows too; ignored by git and docker.
 umask 077
-SPEC="$(mktemp -t penny-app-XXXXXX.yaml)"
+SPEC=".penny-app-spec.yaml"
 trap 'rm -f "$SPEC"' EXIT
 
 {

@@ -6,3 +6,4 @@ deploy
 .git
 *.bundle
 *.md
+.penny-app-spec.yaml
