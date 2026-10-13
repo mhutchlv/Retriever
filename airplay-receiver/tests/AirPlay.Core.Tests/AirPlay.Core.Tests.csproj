@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <RootNamespace>AirPlay.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/AirPlay.Core/AirPlay.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="Exists('../../native/prebuilt/win-x64/playfair.dll')">
+    <None Include="../../native/prebuilt/win-x64/playfair.dll" Link="playfair.dll" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- On Linux/macOS build libplayfair from the vendored sources so the FairPlay tests run for real. -->
+  <Target Name="BuildPlayfairShared" AfterTargets="CopyFilesToOutputDirectory" Condition="!$([MSBuild]::IsOSPlatform('Windows'))">
+    <PropertyGroup>
+      <PlayfairSrc>$(MSBuildThisFileDirectory)../../native/playfair</PlayfairSrc>
+      <PlayfairOut>$(OutDir)libplayfair.so</PlayfairOut>
+      <PlayfairOut Condition="$([MSBuild]::IsOSPlatform('OSX'))">$(OutDir)libplayfair.dylib</PlayfairOut>
+    </PropertyGroup>
+    <MakeDir Directories="$(OutDir)" />
+    <Exec Command="cc -O2 -fPIC -shared -o &quot;$(PlayfairOut)&quot; &quot;$(PlayfairSrc)/playfair.c&quot; &quot;$(PlayfairSrc)/omg_hax.c&quot; &quot;$(PlayfairSrc)/sap_hash.c&quot; &quot;$(PlayfairSrc)/modified_md5.c&quot; &quot;$(PlayfairSrc)/hand_garble.c&quot; -lm" ContinueOnError="true" />
+  </Target>
+
+</Project>

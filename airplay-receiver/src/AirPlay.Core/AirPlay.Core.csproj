@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>AirPlay</RootNamespace>
+    <Description>Protocol core of the AirPlay screen-mirroring receiver: mDNS, RTSP, pairing, FairPlay, stream decryption.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BouncyCastle.Cryptography" Version="2.4.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="AirPlay.Core.Tests" />
+  </ItemGroup>
+
+</Project>

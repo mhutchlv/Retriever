@@ -1,0 +1,59 @@
+name: AirPlay receiver
+
+on:
+  push:
+    paths:
+      - "airplay-receiver/**"
+      - ".github/workflows/airplay-receiver.yml"
+  pull_request:
+    paths:
+      - "airplay-receiver/**"
+      - ".github/workflows/airplay-receiver.yml"
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: airplay-receiver
+
+jobs:
+  test:
+    name: Core tests (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - name: Test
+        run: dotnet test tests/AirPlay.Core.Tests/AirPlay.Core.Tests.csproj -c Release --logger "trx;LogFileName=results.trx"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: airplay-receiver/tests/AirPlay.Core.Tests/TestResults/*.trx
+
+  package:
+    name: Windows package
+    runs-on: windows-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - name: Rebuild playfair.dll from the vendored sources
+        shell: pwsh
+        run: |
+          cmake -S native/playfair -B native/playfair/build -A x64
+          cmake --build native/playfair/build --config Release
+          Copy-Item native/playfair/build/Release/playfair.dll native/prebuilt/win-x64/playfair.dll -Force
+      - name: Publish (self-contained, single file)
+        run: dotnet publish src/AirPlay.Windows/AirPlay.Windows.csproj -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish/win-x64
+      - name: Publish headless host
+        run: dotnet publish src/AirPlay.Host/AirPlay.Host.csproj -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -o publish/host-win-x64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AirPlayReceiver-win-x64
+          path: |
+            airplay-receiver/publish/win-x64/
+            airplay-receiver/publish/host-win-x64/
