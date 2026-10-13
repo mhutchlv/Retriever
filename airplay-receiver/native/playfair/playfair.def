@@ -1,0 +1,3 @@
+LIBRARY playfair
+EXPORTS
+    playfair_decrypt

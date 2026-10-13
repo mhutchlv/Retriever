@@ -1,0 +1,15 @@
+<Project>
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- Lets the WPF project restore/build on Linux and macOS (CI, tests). -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <Authors>AirPlay Receiver contributors</Authors>
+    <Product>AirPlay Receiver for Windows</Product>
+    <Version>0.1.0</Version>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+</Project>

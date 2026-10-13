@@ -1,0 +1,10 @@
+bin/
+obj/
+*.user
+*.suo
+.vs/
+TestResults/
+publish/
+native/build/
+native/playfair/build/
+*.h264

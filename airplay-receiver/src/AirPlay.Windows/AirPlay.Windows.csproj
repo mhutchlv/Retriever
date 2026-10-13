@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <RootNamespace>AirPlay.Windows</RootNamespace>
+    <AssemblyName>AirPlayReceiver</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+    <Description>AirPlay screen-mirroring receiver for Windows 10/11.</Description>
+    <ApplicationIcon />
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- WinForms is only used for the tray icon; keep its namespace out of the global usings. -->
+    <Using Remove="System.Windows.Forms" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../AirPlay.Core/AirPlay.Core.csproj" />
+    <PackageReference Include="NAudio.Wasapi" Version="2.2.1" />
+    <PackageReference Include="NAudio.Core" Version="2.2.1" />
+  </ItemGroup>
+
+  <ItemGroup Condition="Exists('../../native/prebuilt/win-x64/playfair.dll')">
+    <None Include="../../native/prebuilt/win-x64/playfair.dll" Link="playfair.dll" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <Target Name="WarnIfPlayfairMissing" BeforeTargets="Build" Condition="!Exists('../../native/prebuilt/win-x64/playfair.dll')">
+    <Warning Text="native/prebuilt/win-x64/playfair.dll is missing. Build it from native/playfair (see native/README.md); the receiver cannot decrypt FairPlay keys without it." />
+  </Target>
+
+</Project>
