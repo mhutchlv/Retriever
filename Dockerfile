@@ -1,5 +1,5 @@
 # Penny by Propono. TypeScript runs directly on Node 22.18+ (type stripping), so there is no build step.
-FROM node:22.22-alpine
+FROM node:22.23-alpine
 
 WORKDIR /app
 ENV NODE_ENV=production \
